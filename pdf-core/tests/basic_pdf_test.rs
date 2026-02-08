@@ -143,12 +143,12 @@ fn xref_object_count_matches() {
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
-    // Objects: 1=Catalog, 2=Pages, 3=Font,
-    // 4=ContentStream, 5=Page, 6=Info
-    // Size = max_obj + 1 = 7
-    assert!(contains_bytes(&bytes, b"/Size 7"));
+    // Objects: 1=Catalog, 2=Pages, 3=Font(Helv),
+    // 4=Font(HelvBold), 5=ContentStream, 6=Page, 7=Info
+    // Size = max_obj + 1 = 8
+    assert!(contains_bytes(&bytes, b"/Size 8"));
     // Xref section header should match.
-    assert!(contains_bytes(&bytes, b"xref\n0 7\n"));
+    assert!(contains_bytes(&bytes, b"xref\n0 8\n"));
 }
 
 #[test]

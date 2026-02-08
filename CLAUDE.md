@@ -40,6 +40,7 @@ This workspace is organized as:
 - Only work on an issue if the status is `ready`.
 - When starting work on an issue, Agent should update the status to `in-progress`.
 - Test first or Test last can be employed. Either way, the only way to ensure something is complete is when there are tests for it and the tests pass.
+- Test only public api. Do not test private functions
 - If an Issue does not contain any Tasks, enter plan mode and update the issue with the lists of Tasks
 - Once each task of the plan is complete and tests/verification are complete, mark the task as done and a commit to develop branch can be done.
 - Once the Issue is complete, marke the status as complete

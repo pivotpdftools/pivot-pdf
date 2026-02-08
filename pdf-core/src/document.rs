@@ -3,12 +3,14 @@ use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
 use crate::objects::{ObjId, PdfObject};
+use crate::textflow::{FitResult, Rect, TextFlow};
 use crate::writer::PdfWriter;
 
 const CATALOG_OBJ: ObjId = ObjId(1, 0);
 const PAGES_OBJ: ObjId = ObjId(2, 0);
-const FONT_OBJ: ObjId = ObjId(3, 0);
-const FIRST_PAGE_OBJ_NUM: u32 = 4;
+const FONT_HELV_OBJ: ObjId = ObjId(3, 0);
+const FONT_HELV_BOLD_OBJ: ObjId = ObjId(4, 0);
+const FIRST_PAGE_OBJ_NUM: u32 = 5;
 
 /// High-level API for building PDF documents.
 ///
@@ -58,7 +60,21 @@ impl<W: Write> PdfDocument<W> {
                 PdfObject::name("Helvetica"),
             ),
         ]);
-        pdf_writer.write_object(FONT_OBJ, &font)?;
+        pdf_writer.write_object(FONT_HELV_OBJ, &font)?;
+
+        // Write shared Helvetica-Bold font (obj 4).
+        let font_bold = PdfObject::dict(vec![
+            ("Type", PdfObject::name("Font")),
+            ("Subtype", PdfObject::name("Type1")),
+            (
+                "BaseFont",
+                PdfObject::name("Helvetica-Bold"),
+            ),
+        ]);
+        pdf_writer.write_object(
+            FONT_HELV_BOLD_OBJ,
+            &font_bold,
+        )?;
 
         Ok(PdfDocument {
             writer: pdf_writer,
@@ -126,6 +142,26 @@ impl<W: Write> PdfDocument<W> {
         self
     }
 
+    /// Fit a TextFlow into a bounding rectangle on the current
+    /// page. The flow's cursor advances so subsequent calls
+    /// continue where it left off (for multi-page flow).
+    pub fn fit_textflow(
+        &mut self,
+        flow: &mut TextFlow,
+        rect: &Rect,
+    ) -> io::Result<FitResult> {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect(
+                "fit_textflow called with no open page",
+            );
+        let (ops, result) =
+            flow.generate_content_ops(rect);
+        page.content_ops.extend_from_slice(&ops);
+        Ok(result)
+    }
+
     /// End the current page. Writes page objects to the
     /// writer and frees page content from memory.
     pub fn end_page(&mut self) -> io::Result<()> {
@@ -172,12 +208,20 @@ impl<W: Write> PdfDocument<W> {
                 "Resources",
                 PdfObject::dict(vec![(
                     "Font",
-                    PdfObject::dict(vec![(
-                        "F1",
-                        PdfObject::Reference(
-                            FONT_OBJ,
+                    PdfObject::dict(vec![
+                        (
+                            "F1",
+                            PdfObject::Reference(
+                                FONT_HELV_OBJ,
+                            ),
                         ),
-                    )]),
+                        (
+                            "F2",
+                            PdfObject::Reference(
+                                FONT_HELV_BOLD_OBJ,
+                            ),
+                        ),
+                    ]),
                 )]),
             ),
         ]);
@@ -258,7 +302,7 @@ impl<W: Write> PdfDocument<W> {
 }
 
 /// Format a coordinate value for PDF content streams.
-fn format_coord(v: f64) -> String {
+pub(crate) fn format_coord(v: f64) -> String {
     if v == v.floor() && v.abs() < 1e15 {
         format!("{}", v as i64)
     } else {
