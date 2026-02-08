@@ -35,6 +35,7 @@ This workspace is organized as:
 
 ## Working on Issues
 - Consult the ISSUES.md file contains descriptions, tasks, and statuses of work to be done.
+- Try not to make too many assumptions. Ask user if you have questions
 - Work on 1 issue at a time
 - Only work on an issue if the status is `ready`.
 - When starting work on an issue, Agent should update the status to `in-progress`.
