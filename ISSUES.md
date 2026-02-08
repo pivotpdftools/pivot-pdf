@@ -35,3 +35,17 @@ There should be a way to generate a document like sketched above and output it s
 complete
 
 ---
+
+# Issue 2: Improve test organization
+## Description
+The previous Issue ogranized tests with some in the tests directory and others in the same file as the code. All tests should be organized in the tests directory.
+
+## Tasks
+- [x] Identify the tests to move
+- [x] Move the tests
+
+## Status
+complete
+
+---
+
