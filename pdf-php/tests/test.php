@@ -151,7 +151,7 @@ $doc->endDocument();
 $threw = false;
 try {
     $doc->endDocument();
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     $threw = true;
 }
 assert_true($threw, "Double endDocument throws");
