@@ -106,3 +106,19 @@ doc.end_document().unwrap();
 
 ## Status
 complete
+
+---
+
+# Issue 4: PHP Extension
+## Description
+There is enough functionality in the core to proceed with the creation of the php extension. Most likely, there will be a directory, pdf-php or pdf-php-ext.
+
+## Tasks
+- [x] Project scaffolding — Create pdf-php directory, Cargo.toml, minimal lib.rs, add to workspace
+- [x] Implement TextStyle and Rect PHP classes with constructors and to_core helpers
+- [x] Implement TextFlow PHP class wrapping pdf_core::TextFlow
+- [x] Implement PdfDocument PHP class with DocumentInner enum and all methods
+- [x] Integration test — Create test.php, build release, run with php
+
+## Status
+complete
