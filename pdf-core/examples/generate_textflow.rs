@@ -37,6 +37,7 @@ fn main() {
              deserunt mollit anim id est laborum.\n\n",
             &normal,
         );
+        tf.add_text(" this is bold ", &bold);
         tf.add_text(
             "Curabitur pretium tincidunt lacus. Nulla gravida orci \
              a odio. Nullam varius, turpis et commodo pharetra, \
