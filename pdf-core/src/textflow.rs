@@ -100,9 +100,9 @@ impl TextFlow {
     /// preserving newlines as separate entries.
     fn extract_words(&self) -> Vec<Word> {
         let mut words = Vec::new();
+        let mut had_space = false;
         for span in &self.spans {
             let mut chars = span.text.chars().peekable();
-            let mut had_space = false;
 
             while chars.peek().is_some() {
                 // Consume leading spaces

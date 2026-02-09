@@ -96,7 +96,7 @@ fn mixed_bold_and_normal() {
     // Should switch between F1 and F2
     assert!(contains(&bytes, b"/F1 12 Tf"));
     assert!(contains(&bytes, b"/F2 12 Tf"));
-    assert!(contains(&bytes, b"(bold) Tj"));
+    assert!(contains(&bytes, b"( bold) Tj"));
 }
 
 #[test]
@@ -310,6 +310,41 @@ fn word_wrapping_respects_box_width() {
     let td_count =
         output.matches(" Td\n").count();
     assert_eq!(td_count, 2);
+}
+
+#[test]
+fn space_preserved_between_text_flows() {
+    let mut tf = TextFlow::new();
+    let normal = TextStyle::default();
+    tf.add_text("this is bold ", &normal);
+    tf.add_text("and this is not", &normal);
+
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 648.0,
+    };
+
+    let mut doc =
+        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    let result =
+        doc.fit_textflow(&mut tf, &rect).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    // "bold" ends span 1, "and" starts span 2.
+    // The trailing space after "bold " must be preserved
+    // so "and" has a leading space.
+    assert!(contains(&bytes, b"( bold) Tj"));
+    assert!(
+        contains(&bytes, b"( and) Tj"),
+        "Expected '( and) Tj' but space between spans \
+         was lost. Output: {}",
+        String::from_utf8_lossy(&bytes),
+    );
 }
 
 #[test]

@@ -122,3 +122,25 @@ There is enough functionality in the core to proceed with the creation of the ph
 
 ## Status
 complete
+
+---
+
+# Issue 5: Space is not honored between text flows (bug)
+## Description
+When two text flows are added and the first one has a space at the end of the string, the result is missing the space between the two textflows.
+For example, the following:
+```rs
+tf.add_text("this is bold ", &normal);
+tf.add_text("and this is not", &normal);
+```
+will produce:
+`this is boldandthis is not`
+
+## Tasks
+- [x] Create a failing test which reproduces the bug
+- [x] Fix the bug, test should pass
+
+## Status
+complete
+
+---
