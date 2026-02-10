@@ -144,3 +144,191 @@ will produce:
 complete
 
 ---
+
+# Issue 6: Research how other fonts can be used
+## Description
+We currently support only Helvetica font. We need to allow consumers to specifiy other fonts to be loaded and used. Research how this can be done. 
+It looks like fonts/text are covered in section 9 of the PDF32000_2008.pdf specification. This ticket is research only. Update the Research section with the information gathered and create a basic sketch of how the api can support the use of other fonts.
+
+## Tasks
+- [x] Create an api sketch illustrates how other fonts can be loaded and used
+
+## Research
+
+### Font Types in PDF (Section 9 of PDF 32000-1:2008)
+
+PDF supports several font types:
+
+| Type | Description |
+|------|-------------|
+| **Type 1** | Adobe PostScript format. The 14 standard fonts are Type 1. |
+| **TrueType** | Apple/Microsoft format (.ttf). Most common font format. |
+| **Type 0 (Composite)** | Wrapper that references a CIDFont descendant. Required for full Unicode support. |
+| **CIDFontType2** | CIDFont with TrueType outlines. Used when embedding .ttf fonts in a composite structure. |
+
+**Simple vs Composite fonts**: Simple fonts (Type1, TrueType) are single-byte encoded (max 256 glyphs). Composite fonts (Type0 -> CIDFont) support multi-byte encoding for full Unicode. For a modern library, composite fonts are the right choice for embedded fonts.
+
+### The 14 Standard Fonts (No Embedding Required)
+
+These are guaranteed by every PDF viewer without embedding:
+
+1. Helvetica, Helvetica-Bold, Helvetica-Oblique, Helvetica-BoldOblique
+2. Times-Roman, Times-Bold, Times-Italic, Times-BoldItalic
+3. Courier, Courier-Bold, Courier-Oblique, Courier-BoldOblique
+4. Symbol
+5. ZapfDingbats
+
+We currently support Helvetica and Helvetica-Bold. All 14 can be added with minimal font dictionaries (no embedding, no FontDescriptor needed). We do need character width tables for each to support proper text measurement.
+
+Note: PDF 2.0 deprecated the guarantee that standard fonts are available without embedding. For PDF/A compliance, even these must be embedded. For now, the non-embedded approach is acceptable.
+
+### Embedding TrueType Fonts (Type0/CIDFont Composite Structure)
+
+To embed a .ttf font with full Unicode support, 5 PDF objects are needed per font:
+
+1. **Type0 Font dict** - Top-level font referenced by page Resources. Uses `/Encoding /Identity-H` (2-byte glyph IDs map directly to CIDs).
+2. **CIDFontType2 dict** - Describes the TrueType CIDFont. Contains the `/W` widths array mapping CIDs to advance widths.
+3. **FontDescriptor dict** - Font metadata: ascent, descent, bounding box, flags, CapHeight, StemV, and a reference to the font file stream.
+4. **FontFile2 stream** - The embedded .ttf binary (optionally compressed with FlateDecode).
+5. **ToUnicode CMap stream** - Maps glyph IDs back to Unicode codepoints. Critical for copy/paste and text search in viewers.
+
+Relationship:
+```
+Page /Resources /Font /Fx -> Type0 Font
+    /DescendantFonts -> [CIDFontType2]
+        /FontDescriptor -> FontDescriptor
+            /FontFile2 -> Font file stream
+    /ToUnicode -> CMap stream
+```
+
+Text in content streams is written as hex-encoded 2-byte glyph IDs:
+```
+BT /F3 12 Tf 72 700 Td <00480065006C006C006F> Tj ET
+```
+Each character's glyph ID is looked up from the font's `cmap` table.
+
+### Font Metrics (Widths)
+
+TrueType fonts use an internal coordinate system defined by `unitsPerEm` (typically 1000 or 2048). PDF uses 1/1000 of a text unit. Conversion:
+```
+pdf_width = (ttf_advance_width / unitsPerEm) * 1000
+```
+Widths come from the font's `hmtx` table. Glyph IDs come from the `cmap` table.
+
+### Font Subsetting
+
+Full font files can be 1-20+ MB. Subsetting strips unused glyphs, reducing to 5-50 KB. Subsetted fonts use a 6-letter prefix: `/BaseFont /ABCDEF+MyFont`. This is important for keeping PDF file sizes small but can be added as a later optimization.
+
+### Suggested Rust Crates
+
+| Crate | Purpose |
+|-------|---------|
+| `ttf-parser` | Parse .ttf/.otf files. Zero-alloc, no unsafe, lightweight. Extract cmap, hmtx, head, OS/2 tables. |
+| `subsetter` | Font subsetting (from the typst project). Produces valid subset .ttf from font + glyph IDs. |
+| `flate2` | Deflate compression for font file streams. |
+
+### Current Codebase Limitations
+
+- `FontId` enum has only 2 hardcoded variants (Helvetica, HelveticaBold)
+- Character width tables are hardcoded arrays for ASCII 32-126 only
+- `place_text()` is hardcoded to F1/Helvetica at 12pt
+- `TextStyle` selects font via a `bold: bool` field only
+- Every page declares both F1 and F2 regardless of usage
+- Font objects are created at document init with hardcoded object IDs (3, 4)
+- `line_height()` uses a fixed 1.2x multiplier for all fonts
+
+### Suggested Implementation Phases
+
+**Phase 1**: Support all 14 standard fonts. No embedding. Add width tables for each. Refactor `FontId`/`TextStyle` to reference any loaded font.
+
+**Phase 2**: TrueType embedding via Type0/CIDFont composite structure. Full .ttf embedded (no subsetting yet). Use `ttf-parser` for metrics extraction.
+
+**Phase 3**: Font subsetting with `subsetter` crate + `flate2` compression.
+
+## API Sketch
+
+### Rust Core API
+
+```rust
+// --- Loading fonts ---
+
+// Built-in standard fonts (no embedding needed)
+let helvetica = doc.load_builtin_font(BuiltinFont::Helvetica)?;
+let times_bold = doc.load_builtin_font(BuiltinFont::TimesBold)?;
+let courier = doc.load_builtin_font(BuiltinFont::Courier)?;
+
+// External TrueType fonts (embedded in the PDF)
+let roboto = doc.load_font_file("fonts/Roboto-Regular.ttf")?;
+let roboto_bold = doc.load_font_file("fonts/Roboto-Bold.ttf")?;
+
+// --- Using fonts in TextStyle ---
+
+// TextStyle references a FontHandle instead of just bold: bool
+let normal = TextStyle::new(&helvetica, 12.0);
+let heading = TextStyle::new(&roboto_bold, 18.0);
+let body = TextStyle::new(&roboto, 11.0);
+
+// --- TextFlow usage (unchanged) ---
+let mut tf = TextFlow::new();
+tf.add_text("Heading\n", &heading);
+tf.add_text("Body text in Roboto. ", &body);
+tf.add_text("Some Helvetica text.", &normal);
+
+// --- place_text gains an optional style parameter ---
+doc.place_text_styled("Hello", 72.0, 720.0, &normal);
+```
+
+### BuiltinFont Enum
+
+```rust
+pub enum BuiltinFont {
+    Helvetica,
+    HelveticaBold,
+    HelveticaOblique,
+    HelveticaBoldOblique,
+    TimesRoman,
+    TimesBold,
+    TimesItalic,
+    TimesBoldItalic,
+    Courier,
+    CourierBold,
+    CourierOblique,
+    CourierBoldOblique,
+    Symbol,
+    ZapfDingbats,
+}
+```
+
+### FontHandle
+
+```rust
+// Opaque handle returned by load_builtin_font / load_font_file.
+// Internally holds an index into the document's font registry.
+#[derive(Debug, Clone, Copy)]
+pub struct FontHandle {
+    index: usize,
+}
+```
+
+### PHP Extension API
+
+```php
+// Built-in fonts
+$helvetica = $doc->loadBuiltinFont("Helvetica");
+$timesBold = $doc->loadBuiltinFont("Times-Bold");
+
+// External font
+$roboto = $doc->loadFontFile("fonts/Roboto-Regular.ttf");
+
+// TextStyle takes a FontHandle + size
+$heading = new TextStyle($roboto, 18.0);
+$body = new TextStyle($helvetica, 12.0);
+
+// Usage unchanged
+$tf = new TextFlow();
+$tf->addText("Heading\n", $heading);
+$tf->addText("Body text.", $body);
+```
+
+## Status
+complete
