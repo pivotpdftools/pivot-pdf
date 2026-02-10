@@ -5,7 +5,8 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pdf_core::{
-    FitResult, PdfDocument, Rect, TextFlow, TextStyle,
+    BuiltinFont, FitResult, PdfDocument, Rect, TextFlow,
+    TextStyle,
 };
 
 // ----------------------------------------------------------
@@ -15,33 +16,57 @@ use pdf_core::{
 /// PHP class: TextStyle
 ///
 /// ```php
-/// $style = new TextStyle();          // defaults
-/// $style = new TextStyle(true, 14.0); // bold, 14pt
+/// $style = new TextStyle();                    // defaults
+/// $style = new TextStyle("Helvetica-Bold");    // bold
+/// $style = new TextStyle("Times-Roman", 14.0); // Times 14pt
 /// ```
 #[php_class(name = "TextStyle")]
 pub struct PhpTextStyle {
     #[prop]
-    pub bold: bool,
+    pub font: String,
     #[prop]
     pub font_size: f64,
 }
 
 #[php_impl]
 impl PhpTextStyle {
-    pub fn __construct(bold: Option<bool>, font_size: Option<f64>) -> Self {
+    pub fn __construct(
+        font: Option<String>,
+        font_size: Option<f64>,
+    ) -> Self {
         PhpTextStyle {
-            bold: bold.unwrap_or(false),
+            font: font.unwrap_or_else(|| {
+                "Helvetica".to_string()
+            }),
             font_size: font_size.unwrap_or(12.0),
         }
     }
 }
 
 impl PhpTextStyle {
-    fn to_core(&self) -> TextStyle {
-        TextStyle {
-            bold: self.bold,
+    fn to_core(&self) -> Result<TextStyle, String> {
+        let builtin =
+            BuiltinFont::from_name(&self.font).ok_or_else(
+                || {
+                    format!(
+                        "Unknown font: '{}'. Valid names: \
+                         Helvetica, Helvetica-Bold, \
+                         Helvetica-Oblique, \
+                         Helvetica-BoldOblique, \
+                         Times-Roman, Times-Bold, \
+                         Times-Italic, Times-BoldItalic, \
+                         Courier, Courier-Bold, \
+                         Courier-Oblique, \
+                         Courier-BoldOblique, \
+                         Symbol, ZapfDingbats",
+                        self.font,
+                    )
+                },
+            )?;
+        Ok(TextStyle {
+            font: builtin,
             font_size: self.font_size,
-        }
+        })
     }
 }
 
@@ -98,7 +123,7 @@ impl PhpRect {
 /// ```php
 /// $tf = new TextFlow();
 /// $tf->addText("Hello ", new TextStyle());
-/// $tf->addText("Bold", new TextStyle(true, 14.0));
+/// $tf->addText("Bold", new TextStyle("Helvetica-Bold"));
 /// ```
 #[php_class(name = "TextFlow")]
 pub struct PhpTextFlow {
@@ -111,9 +136,14 @@ impl PhpTextFlow {
         PhpTextFlow { inner: TextFlow::new() }
     }
 
-    pub fn add_text(&mut self, text: &str, style: &PhpTextStyle) {
-        let core_style = style.to_core();
+    pub fn add_text(
+        &mut self,
+        text: &str,
+        style: &PhpTextStyle,
+    ) -> Result<(), String> {
+        let core_style = style.to_core()?;
         self.inner.add_text(text, &core_style);
+        Ok(())
     }
 
     pub fn is_finished(&self) -> bool {
@@ -164,7 +194,9 @@ pub struct PhpPdfDocument {
 impl PhpPdfDocument {
     pub fn create(path: &str) -> Result<Self, String> {
         let doc = PdfDocument::create(path)
-            .map_err(|e| format!("create failed: {}", e))?;
+            .map_err(|e| {
+                format!("create failed: {}", e)
+            })?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::File(doc)),
         })
@@ -172,7 +204,12 @@ impl PhpPdfDocument {
 
     pub fn create_in_memory() -> Result<Self, String> {
         let doc = PdfDocument::new(Vec::new())
-            .map_err(|e| format!("create_in_memory failed: {}", e))?;
+            .map_err(|e| {
+                format!(
+                    "create_in_memory failed: {}",
+                    e,
+                )
+            })?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::Memory(doc)),
         })
@@ -219,46 +256,77 @@ impl PhpPdfDocument {
     ) -> Result<String, String> {
         let core_rect = rect.to_core();
         with_doc!(self, fit_textflow, doc => {
-            let result = doc.fit_textflow(&mut flow.inner, &core_rect)
-                .map_err(|e| format!("fit_textflow failed: {}", e))?;
+            let result = doc
+                .fit_textflow(
+                    &mut flow.inner,
+                    &core_rect,
+                )
+                .map_err(|e| {
+                    format!(
+                        "fit_textflow failed: {}",
+                        e,
+                    )
+                })?;
             Ok(match result {
-                FitResult::Stop => "stop".to_string(),
-                FitResult::BoxFull => "box_full".to_string(),
-                FitResult::BoxEmpty => "box_empty".to_string(),
+                FitResult::Stop => {
+                    "stop".to_string()
+                }
+                FitResult::BoxFull => {
+                    "box_full".to_string()
+                }
+                FitResult::BoxEmpty => {
+                    "box_empty".to_string()
+                }
             })
         })
     }
 
     pub fn end_page(&mut self) -> Result<(), String> {
         with_doc!(self, end_page, doc => {
-            doc.end_page()
-                .map_err(|e| format!("end_page failed: {}", e))
+            doc.end_page().map_err(|e| {
+                format!("end_page failed: {}", e)
+            })
         })
     }
 
     /// End the document. Returns null for file-based docs,
     /// or a binary string for in-memory docs.
-    pub fn end_document(&mut self) -> Result<Zval, String> {
-        let inner = self.inner.take().ok_or_else(|| {
-            "end_document: document already ended".to_string()
-        })?;
+    pub fn end_document(
+        &mut self,
+    ) -> Result<Zval, String> {
+        let inner =
+            self.inner.take().ok_or_else(|| {
+                "end_document: document already ended"
+                    .to_string()
+            })?;
         match inner {
             DocumentInner::File(doc) => {
-                let mut writer = doc.end_document()
+                let mut writer = doc
+                    .end_document()
                     .map_err(|e| {
-                        format!("end_document failed: {}", e)
+                        format!(
+                            "end_document failed: {}",
+                            e,
+                        )
                     })?;
                 writer.flush().map_err(|e| {
-                    format!("end_document flush failed: {}", e)
+                    format!(
+                        "end_document flush failed: {}",
+                        e,
+                    )
                 })?;
                 let mut zval = Zval::new();
                 zval.set_null();
                 Ok(zval)
             }
             DocumentInner::Memory(doc) => {
-                let bytes = doc.end_document()
+                let bytes = doc
+                    .end_document()
                     .map_err(|e| {
-                        format!("end_document failed: {}", e)
+                        format!(
+                            "end_document failed: {}",
+                            e,
+                        )
                     })?;
                 let mut zval = Zval::new();
                 zval.set_binary(bytes);
@@ -269,6 +337,8 @@ impl PhpPdfDocument {
 }
 
 #[php_module]
-pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
+pub fn get_module(
+    module: ModuleBuilder,
+) -> ModuleBuilder {
     module
 }

@@ -1,5 +1,7 @@
+use std::collections::BTreeSet;
+
 use crate::document::format_coord;
-use crate::fonts::{FontId, FontMetrics};
+use crate::fonts::{BuiltinFont, FontMetrics};
 use crate::writer::escape_pdf_string;
 
 /// Result of fitting text into a bounding box.
@@ -26,25 +28,15 @@ pub struct Rect {
 /// Text styling options.
 #[derive(Debug, Clone)]
 pub struct TextStyle {
-    pub bold: bool,
+    pub font: BuiltinFont,
     pub font_size: f64,
 }
 
 impl Default for TextStyle {
     fn default() -> Self {
         TextStyle {
-            bold: false,
+            font: BuiltinFont::Helvetica,
             font_size: 12.0,
-        }
-    }
-}
-
-impl TextStyle {
-    fn font_id(&self) -> FontId {
-        if self.bold {
-            FontId::HelveticaBold
-        } else {
-            FontId::Helvetica
         }
     }
 }
@@ -146,27 +138,38 @@ impl TextFlow {
         words
     }
 
-    /// Generate PDF content stream operations that fit within the
-    /// given rectangle. Returns the content bytes and a FitResult.
+    /// Generate PDF content stream operations that fit within
+    /// the given rectangle. Returns the content bytes, a
+    /// FitResult, and the set of fonts actually used.
     pub fn generate_content_ops(
         &mut self,
         rect: &Rect,
-    ) -> (Vec<u8>, FitResult) {
+    ) -> (Vec<u8>, FitResult, BTreeSet<BuiltinFont>) {
+        let empty_fonts = BTreeSet::new();
         let words = self.extract_words();
         if self.cursor >= words.len() {
-            return (Vec::new(), FitResult::Stop);
+            return (
+                Vec::new(),
+                FitResult::Stop,
+                empty_fonts,
+            );
         }
 
         let mut output = Vec::new();
+        let mut fonts_used = BTreeSet::new();
         let first_word = &words[self.cursor];
         let first_line_height = FontMetrics::line_height(
-            first_word.style.font_id(),
+            first_word.style.font,
             first_word.style.font_size,
         );
 
         // Check if even one line fits vertically
         if first_line_height > rect.height {
-            return (Vec::new(), FitResult::BoxEmpty);
+            return (
+                Vec::new(),
+                FitResult::BoxEmpty,
+                empty_fonts,
+            );
         }
 
         output.extend_from_slice(b"BT\n");
@@ -181,12 +184,13 @@ impl TextFlow {
         let mut any_text_placed = false;
 
         // Track current font state in the content stream
-        let mut active_font: Option<FontId> = None;
+        let mut active_font: Option<BuiltinFont> = None;
         let mut active_size: Option<f64> = None;
 
         while self.cursor < words.len() {
-            // Determine line height from the first word on this line
-            let line_font = words[self.cursor].style.font_id();
+            // Determine line height from the first word on
+            // this line
+            let line_font = words[self.cursor].style.font;
             let line_font_size =
                 words[self.cursor].style.font_size;
             let line_height = FontMetrics::line_height(
@@ -199,7 +203,11 @@ impl TextFlow {
                 let bottom = rect.y - rect.height;
                 if next_y < bottom {
                     output.extend_from_slice(b"ET\n");
-                    return (output, FitResult::BoxFull);
+                    return (
+                        output,
+                        FitResult::BoxFull,
+                        fonts_used,
+                    );
                 }
             }
 
@@ -217,7 +225,7 @@ impl TextFlow {
                     break;
                 }
 
-                let font = word.style.font_id();
+                let font = word.style.font;
                 let font_size = word.style.font_size;
                 let word_width = FontMetrics::measure_text(
                     &word.text, font, font_size,
@@ -230,7 +238,8 @@ impl TextFlow {
                     0.0
                 };
 
-                let total = line_width + space_width + word_width;
+                let total = line_width + space_width
+                    + word_width;
                 if total > rect.width
                     && line_end_cursor > line_start_cursor
                 {
@@ -246,10 +255,11 @@ impl TextFlow {
                         return (
                             Vec::new(),
                             FitResult::BoxEmpty,
+                            BTreeSet::new(),
                         );
                     }
-                    // Place it anyway if we've placed other text
-                    // (it will overflow the line)
+                    // Place it anyway if we've placed other
+                    // text (it will overflow the line)
                     line_end_cursor += 1;
                     break;
                 }
@@ -291,7 +301,7 @@ impl TextFlow {
                 if word.text == "\n" {
                     continue;
                 }
-                let font = word.style.font_id();
+                let font = word.style.font;
                 let font_size = word.style.font_size;
 
                 // Set font if changed
@@ -308,20 +318,23 @@ impl TextFlow {
                     );
                     active_font = Some(font);
                     active_size = Some(font_size);
+                    fonts_used.insert(font);
                 }
 
                 let is_first_on_line =
                     i == line_start_cursor;
-                let display_text =
-                    if word.leading_space && !is_first_on_line
-                    {
-                        format!(" {}", word.text)
-                    } else {
-                        word.text.clone()
-                    };
-                let escaped = escape_pdf_string(&display_text);
+                let display_text = if word.leading_space
+                    && !is_first_on_line
+                {
+                    format!(" {}", word.text)
+                } else {
+                    word.text.clone()
+                };
+                let escaped =
+                    escape_pdf_string(&display_text);
                 output.extend_from_slice(
-                    format!("({}) Tj\n", escaped).as_bytes(),
+                    format!("({}) Tj\n", escaped)
+                        .as_bytes(),
                 );
             }
 
@@ -332,9 +345,9 @@ impl TextFlow {
         output.extend_from_slice(b"ET\n");
 
         if self.cursor >= words.len() {
-            (output, FitResult::Stop)
+            (output, FitResult::Stop, fonts_used)
         } else {
-            (output, FitResult::BoxFull)
+            (output, FitResult::BoxFull, fonts_used)
         }
     }
 }

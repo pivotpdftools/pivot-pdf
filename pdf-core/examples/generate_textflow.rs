@@ -1,4 +1,7 @@
-use pdf_core::{FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pdf_core::{
+    BuiltinFont, FitResult, PdfDocument, Rect, TextFlow,
+    TextStyle,
+};
 
 fn main() {
     let path = "textflow_output.pdf";
@@ -6,48 +9,78 @@ fn main() {
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "TextFlow Example");
 
-    let bold = TextStyle { bold: true, ..Default::default() };
+    let bold = TextStyle {
+        font: BuiltinFont::HelveticaBold,
+        ..Default::default()
+    };
     let normal = TextStyle::default();
+    let times = TextStyle {
+        font: BuiltinFont::TimesRoman,
+        font_size: 11.0,
+    };
+    let courier = TextStyle {
+        font: BuiltinFont::Courier,
+        font_size: 10.0,
+    };
 
     let mut tf = TextFlow::new();
     tf.add_text("TextFlow Demo\n\n", &bold);
     tf.add_text(
-        "This document demonstrates the TextFlow feature of the \
-         rust-pdf library. Text is automatically wrapped within a \
-         bounding box and flows across multiple pages when the box \
+        "This document demonstrates the TextFlow \
+         feature of the rust-pdf library. Text is \
+         automatically wrapped within a bounding box \
+         and flows across multiple pages when the box \
          is full.\n\n",
         &normal,
     );
 
-    // Generate several paragraphs of text to fill multiple pages.
+    // Demonstrate Times-Roman
+    tf.add_text(
+        "This paragraph is set in Times-Roman at 11pt. \
+         The quick brown fox jumps over the lazy dog.\n\n",
+        &times,
+    );
+
+    // Demonstrate Courier
+    tf.add_text(
+        "This line is in Courier at 10pt (monospaced).\n\n",
+        &courier,
+    );
+
+    // Generate several paragraphs of text to fill multiple
+    // pages.
     for i in 1..=6 {
         tf.add_text(
             &format!("Section {}\n", i),
             &bold,
         );
         tf.add_text(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing \
-             elit. Sed do eiusmod tempor incididunt ut labore et \
-             dolore magna aliqua. Ut enim ad minim veniam, quis \
-             nostrud exercitation ullamco laboris nisi ut aliquip \
-             ex ea commodo consequat. Duis aute irure dolor in \
-             reprehenderit in voluptate velit esse cillum dolore \
-             eu fugiat nulla pariatur. Excepteur sint occaecat \
-             cupidatat non proident, sunt in culpa qui officia \
-             deserunt mollit anim id est laborum.\n\n",
+            "Lorem ipsum dolor sit amet, consectetur \
+             adipiscing elit. Sed do eiusmod tempor \
+             incididunt ut labore et dolore magna aliqua. \
+             Ut enim ad minim veniam, quis nostrud \
+             exercitation ullamco laboris nisi ut aliquip \
+             ex ea commodo consequat. Duis aute irure \
+             dolor in reprehenderit in voluptate velit \
+             esse cillum dolore eu fugiat nulla pariatur. \
+             Excepteur sint occaecat cupidatat non \
+             proident, sunt in culpa qui officia deserunt \
+             mollit anim id est laborum.\n\n",
             &normal,
         );
         tf.add_text(" this is bold ", &bold);
         tf.add_text(
-            "Curabitur pretium tincidunt lacus. Nulla gravida orci \
-             a odio. Nullam varius, turpis et commodo pharetra, \
-             est eros bibendum elit, nec luctus magna felis \
-             sollicitudin mauris. Integer in mauris eu nibh euismod \
-             gravida. Duis ac tellus et risus vulputate vehicula. \
-             Donec lobortis risus a elit. Etiam tempor. Ut \
-             ullamcorper, ligula ut dictum pharetra, nisi nunc \
-             fringilla magna, in commodo elit erat nec turpis. \
-             Ut pharetra augue nec augue.\n\n",
+            "Curabitur pretium tincidunt lacus. Nulla \
+             gravida orci a odio. Nullam varius, turpis \
+             et commodo pharetra, est eros bibendum elit, \
+             nec luctus magna felis sollicitudin mauris. \
+             Integer in mauris eu nibh euismod gravida. \
+             Duis ac tellus et risus vulputate vehicula. \
+             Donec lobortis risus a elit. Etiam tempor. \
+             Ut ullamcorper, ligula ut dictum pharetra, \
+             nisi nunc fringilla magna, in commodo elit \
+             erat nec turpis. Ut pharetra augue nec \
+             augue.\n\n",
             &normal,
         );
     }
@@ -65,7 +98,8 @@ fn main() {
     let mut page_count = 0;
     loop {
         doc.begin_page(612.0, 792.0);
-        let result = doc.fit_textflow(&mut tf, &rect).unwrap();
+        let result =
+            doc.fit_textflow(&mut tf, &rect).unwrap();
         doc.end_page().unwrap();
         page_count += 1;
 
@@ -73,7 +107,9 @@ fn main() {
             FitResult::Stop => break,
             FitResult::BoxFull => continue,
             FitResult::BoxEmpty => {
-                eprintln!("Warning: bounding box too small");
+                eprintln!(
+                    "Warning: bounding box too small",
+                );
                 break;
             }
         }

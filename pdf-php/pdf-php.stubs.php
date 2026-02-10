@@ -9,15 +9,21 @@
 
 class TextStyle
 {
-    public bool $bold;
+    public string $font;
     public float $font_size;
 
     /**
-     * @param bool  $bold      Whether to use bold font (default: false)
-     * @param float $font_size Font size in points (default: 12.0)
+     * @param string $font      Font name (default: "Helvetica").
+     *                           Valid names: Helvetica, Helvetica-Bold,
+     *                           Helvetica-Oblique, Helvetica-BoldOblique,
+     *                           Times-Roman, Times-Bold, Times-Italic,
+     *                           Times-BoldItalic, Courier, Courier-Bold,
+     *                           Courier-Oblique, Courier-BoldOblique,
+     *                           Symbol, ZapfDingbats
+     * @param float  $font_size Font size in points (default: 12.0)
      */
     public function __construct(
-        bool $bold = false,
+        string $font = 'Helvetica',
         float $font_size = 12.0
     ) {}
 }

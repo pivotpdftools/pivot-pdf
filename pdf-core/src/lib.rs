@@ -5,4 +5,5 @@ pub mod fonts;
 pub mod textflow;
 
 pub use document::PdfDocument;
+pub use fonts::BuiltinFont;
 pub use textflow::{TextFlow, TextStyle, FitResult, Rect};

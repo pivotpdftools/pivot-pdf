@@ -1,16 +1,17 @@
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
+use crate::fonts::BuiltinFont;
 use crate::objects::{ObjId, PdfObject};
-use crate::textflow::{FitResult, Rect, TextFlow};
+use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
 use crate::writer::PdfWriter;
 
 const CATALOG_OBJ: ObjId = ObjId(1, 0);
 const PAGES_OBJ: ObjId = ObjId(2, 0);
-const FONT_HELV_OBJ: ObjId = ObjId(3, 0);
-const FONT_HELV_BOLD_OBJ: ObjId = ObjId(4, 0);
-const FIRST_PAGE_OBJ_NUM: u32 = 5;
+const FIRST_PAGE_OBJ_NUM: u32 = 3;
 
 /// High-level API for building PDF documents.
 ///
@@ -26,12 +27,16 @@ pub struct PdfDocument<W: Write> {
     page_obj_ids: Vec<ObjId>,
     current_page: Option<PageBuilder>,
     next_obj_num: u32,
+    /// Maps each used font to the ObjId assigned when its
+    /// dictionary was first written.
+    font_obj_ids: BTreeMap<BuiltinFont, ObjId>,
 }
 
 struct PageBuilder {
     width: f64,
     height: f64,
     content_ops: Vec<u8>,
+    used_fonts: BTreeSet<BuiltinFont>,
 }
 
 impl PdfDocument<BufWriter<File>> {
@@ -46,35 +51,10 @@ impl PdfDocument<BufWriter<File>> {
 
 impl<W: Write> PdfDocument<W> {
     /// Create a new PDF document that writes to the given writer.
-    /// Writes the PDF header and shared font object immediately.
+    /// Writes the PDF header immediately.
     pub fn new(writer: W) -> io::Result<Self> {
         let mut pdf_writer = PdfWriter::new(writer);
         pdf_writer.write_header()?;
-
-        // Write shared Helvetica font (obj 3).
-        let font = PdfObject::dict(vec![
-            ("Type", PdfObject::name("Font")),
-            ("Subtype", PdfObject::name("Type1")),
-            (
-                "BaseFont",
-                PdfObject::name("Helvetica"),
-            ),
-        ]);
-        pdf_writer.write_object(FONT_HELV_OBJ, &font)?;
-
-        // Write shared Helvetica-Bold font (obj 4).
-        let font_bold = PdfObject::dict(vec![
-            ("Type", PdfObject::name("Font")),
-            ("Subtype", PdfObject::name("Type1")),
-            (
-                "BaseFont",
-                PdfObject::name("Helvetica-Bold"),
-            ),
-        ]);
-        pdf_writer.write_object(
-            FONT_HELV_BOLD_OBJ,
-            &font_bold,
-        )?;
 
         Ok(PdfDocument {
             writer: pdf_writer,
@@ -82,6 +62,7 @@ impl<W: Write> PdfDocument<W> {
             page_obj_ids: Vec::new(),
             current_page: None,
             next_obj_num: FIRST_PAGE_OBJ_NUM,
+            font_obj_ids: BTreeMap::new(),
         })
     }
 
@@ -112,6 +93,7 @@ impl<W: Write> PdfDocument<W> {
             width,
             height,
             content_ops: Vec::new(),
+            used_fonts: BTreeSet::new(),
         });
         self
     }
@@ -128,10 +110,43 @@ impl<W: Write> PdfDocument<W> {
             .current_page
             .as_mut()
             .expect("place_text called with no open page");
+        page.used_fonts.insert(BuiltinFont::Helvetica);
         let escaped =
             crate::writer::escape_pdf_string(text);
         let ops = format!(
             "BT\n/F1 12 Tf\n{} {} Td\n({}) Tj\nET\n",
+            format_coord(x),
+            format_coord(y),
+            escaped,
+        );
+        page.content_ops.extend_from_slice(
+            ops.as_bytes(),
+        );
+        self
+    }
+
+    /// Place text at position (x, y) with the given style.
+    /// Coordinates use PDF's default bottom-left origin.
+    pub fn place_text_styled(
+        &mut self,
+        text: &str,
+        x: f64,
+        y: f64,
+        style: &TextStyle,
+    ) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect(
+                "place_text_styled called with no open page",
+            );
+        page.used_fonts.insert(style.font);
+        let escaped =
+            crate::writer::escape_pdf_string(text);
+        let ops = format!(
+            "BT\n/{} {} Tf\n{} {} Td\n({}) Tj\nET\n",
+            style.font.pdf_name(),
+            format_coord(style.font_size),
             format_coord(x),
             format_coord(y),
             escaped,
@@ -156,10 +171,35 @@ impl<W: Write> PdfDocument<W> {
             .expect(
                 "fit_textflow called with no open page",
             );
-        let (ops, result) =
+        let (ops, result, fonts) =
             flow.generate_content_ops(rect);
         page.content_ops.extend_from_slice(&ops);
+        page.used_fonts.extend(fonts);
         Ok(result)
+    }
+
+    /// Ensure a font's dictionary object has been written.
+    /// Returns the ObjId for the font.
+    fn ensure_font_written(
+        &mut self,
+        font: BuiltinFont,
+    ) -> io::Result<ObjId> {
+        if let Some(&id) = self.font_obj_ids.get(&font) {
+            return Ok(id);
+        }
+        let id = ObjId(self.next_obj_num, 0);
+        self.next_obj_num += 1;
+        let obj = PdfObject::dict(vec![
+            ("Type", PdfObject::name("Font")),
+            ("Subtype", PdfObject::name("Type1")),
+            (
+                "BaseFont",
+                PdfObject::name(font.pdf_base_name()),
+            ),
+        ]);
+        self.writer.write_object(id, &obj)?;
+        self.font_obj_ids.insert(font, id);
+        Ok(id)
     }
 
     /// End the current page. Writes page objects to the
@@ -169,6 +209,11 @@ impl<W: Write> PdfDocument<W> {
             .current_page
             .take()
             .expect("end_page called with no open page");
+
+        // Write font objects for any fonts not yet written.
+        for &font in &page.used_fonts {
+            self.ensure_font_written(font)?;
+        }
 
         let content_id =
             ObjId(self.next_obj_num, 0);
@@ -183,6 +228,20 @@ impl<W: Write> PdfDocument<W> {
         );
         self.writer
             .write_object(content_id, &content_stream)?;
+
+        // Build font resource entries for only used fonts.
+        let font_entries: Vec<(&str, PdfObject)> =
+            page.used_fonts
+                .iter()
+                .map(|f| {
+                    (
+                        f.pdf_name(),
+                        PdfObject::Reference(
+                            self.font_obj_ids[f],
+                        ),
+                    )
+                })
+                .collect();
 
         // Write page dictionary.
         let page_dict = PdfObject::dict(vec![
@@ -208,20 +267,7 @@ impl<W: Write> PdfDocument<W> {
                 "Resources",
                 PdfObject::dict(vec![(
                     "Font",
-                    PdfObject::dict(vec![
-                        (
-                            "F1",
-                            PdfObject::Reference(
-                                FONT_HELV_OBJ,
-                            ),
-                        ),
-                        (
-                            "F2",
-                            PdfObject::Reference(
-                                FONT_HELV_BOLD_OBJ,
-                            ),
-                        ),
-                    ]),
+                    PdfObject::dict(font_entries),
                 )]),
             ),
         ]);

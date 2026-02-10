@@ -332,3 +332,20 @@ $tf->addText("Body text.", $body);
 
 ## Status
 complete
+
+---
+
+# Issue 7: Implement Font Handling
+## Description
+Based on research findings in Issue 6, implmenent Font handling.
+
+## Tasks
+- [x] Task 1: Expand BuiltinFont enum and add width tables
+- [x] Task 2: Refactor TextStyle and TextFlow
+- [x] Task 3: Refactor PdfDocument font management
+- [x] Task 4: Update public exports
+- [x] Task 5: Update PHP extension
+- [x] Task 6: Update example
+
+## Status
+complete

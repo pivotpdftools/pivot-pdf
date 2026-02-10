@@ -74,27 +74,43 @@ echo "Test 2 (in-memory): OK\n";
 $outFile = __DIR__ . '/php-textflow_output.pdf';
 $doc = PdfDocument::create($outFile);
 
+$times = new TextStyle('Times-Roman', 11.0);
+$courier = new TextStyle('Courier', 10.0);
+
 $tf = new TextFlow();
-$tf->addText("TextFlow Demo (PHP)\n\n", new TextStyle(true));
+$tf->addText("TextFlow Demo (PHP)\n\n", new TextStyle("Helvetica-Bold"));
 $tf->addText("This document demonstrates the TextFlow feature of the "
          . "rust-pdf library. Text is automatically wrapped within a "
          . "bounding box and flows across multiple pages when the box "
          . "is full.\n\n", new TextStyle());
 
+// Demonstrate Times-Roman
+$tf->addText(
+    "This paragraph is set in Times-Roman at 11pt. "
+    . "The quick brown fox jumps over the lazy dog.\n\n",
+    $times
+);
+
+// Demonstrate Courier
+$tf->addText(
+    "This line is in Courier at 10pt (monospaced).\n\n",
+    $courier
+);
+
 // Generate several paragraphs of text to fill multiple pages.
 for($i=1; $i<=6; $i++) {
-    $tf->addText("Section $i\n", new TextStyle(true));
+    $tf->addText("Section $i\n", new TextStyle("Helvetica-Bold"));
 
     $tf->addText("Lorem ipsum dolor sit amet, consectetur adipiscing "
         . "elit. Sed do eiusmod tempor incididunt ut labore et "
         . "dolore magna aliqua. Ut enim ad minim veniam, quis "
         . "nostrud exercitation ullamco laboris nisi ut aliquip "
         . "ex ea commodo consequat. Duis aute irure dolor in "
-        . "reprehenderit in voluptate velit esse cillum dolore " 
+        . "reprehenderit in voluptate velit esse cillum dolore "
         . "eu fugiat nulla pariatur. Excepteur sint occaecat "
         . "cupidatat non proident, sunt in culpa qui officia "
         . "deserunt mollit anim id est laborum.\n\n", new TextStyle());
-    $tf->addText(" this is bold ", new TextStyle(true));
+    $tf->addText(" this is bold ", new TextStyle("Helvetica-Bold"));
     $tf->addText(
         "Curabitur pretium tincidunt lacus. Nulla gravida orci "
             . "a odio. Nullam varius, turpis et commodo pharetra, "
@@ -109,7 +125,7 @@ for($i=1; $i<=6; $i++) {
     );
 }
 
-$tf->addText("End of document.", new TextStyle(true));
+$tf->addText("End of document.", new TextStyle("Helvetica-Bold"));
 
 $rect = new Rect(72.0, 720.0, 468.0, 648.0);
 $pages = 0;
@@ -152,11 +168,14 @@ echo "Test 3 (textflow) $outFile: OK\n";
 // Test 4: TextStyle defaults
 // ----------------------------------------------------------
 $style = new TextStyle();
-assert_true($style->bold === false, "Default bold is false");
+assert_true($style->font === "Helvetica", "Default font is Helvetica");
 assert_true($style->font_size === 12.0, "Default font_size is 12.0");
 
-$style2 = new TextStyle(true, 18.0);
-assert_true($style2->bold === true, "Custom bold is true");
+$style2 = new TextStyle("Helvetica-Bold", 18.0);
+assert_true(
+    $style2->font === "Helvetica-Bold",
+    "Custom font is Helvetica-Bold"
+);
 assert_true($style2->font_size === 18.0, "Custom font_size is 18.0");
 
 echo "Test 4 (TextStyle): OK\n";
@@ -189,6 +208,26 @@ try {
 assert_true($threw, "Double endDocument throws");
 
 echo "Test 6 (double end): OK\n";
+
+// ----------------------------------------------------------
+// Test 7: TextStyle with Times-Roman font
+// ----------------------------------------------------------
+$doc = PdfDocument::createInMemory();
+$doc->beginPage(612.0, 792.0);
+$tf = new TextFlow();
+$tf->addText("Times text", new TextStyle("Times-Roman"));
+$rect = new Rect(72.0, 720.0, 468.0, 648.0);
+$result = $doc->fitTextflow($tf, $rect);
+$doc->endPage();
+$bytes = $doc->endDocument();
+
+assert_true($result === "stop", "Times-Roman textflow stops");
+assert_true(
+    str_contains($bytes, '/F5'),
+    "Times-Roman uses F5 resource"
+);
+
+echo "Test 7 (Times-Roman): OK\n";
 
 // ----------------------------------------------------------
 // Summary

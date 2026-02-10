@@ -1,4 +1,7 @@
-use pdf_core::{FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pdf_core::{
+    BuiltinFont, FitResult, PdfDocument, Rect, TextFlow,
+    TextStyle,
+};
 
 /// Helper: check that a byte pattern exists in the buffer.
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
@@ -39,7 +42,7 @@ fn bold_text_uses_f2() {
     tf.add_text(
         "bold",
         &TextStyle {
-            bold: true,
+            font: BuiltinFont::HelveticaBold,
             ..Default::default()
         },
     );
@@ -71,7 +74,7 @@ fn mixed_bold_and_normal() {
     tf.add_text(
         "bold",
         &TextStyle {
-            bold: true,
+            font: BuiltinFont::HelveticaBold,
             ..Default::default()
         },
     );
@@ -349,9 +352,27 @@ fn space_preserved_between_text_flows() {
 
 #[test]
 fn bold_font_in_pdf_output() {
+    let mut tf = TextFlow::new();
+    tf.add_text("normal ", &TextStyle::default());
+    tf.add_text(
+        "bold",
+        &TextStyle {
+            font: BuiltinFont::HelveticaBold,
+            ..Default::default()
+        },
+    );
+
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 648.0,
+    };
+
     let mut doc =
         PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
+    doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -367,4 +388,87 @@ fn bold_font_in_pdf_output() {
     // Resources should reference both
     assert!(contains(&bytes, b"/F1"));
     assert!(contains(&bytes, b"/F2"));
+}
+
+#[test]
+fn times_font_in_textflow() {
+    let mut tf = TextFlow::new();
+    tf.add_text(
+        "Times text",
+        &TextStyle {
+            font: BuiltinFont::TimesRoman,
+            ..Default::default()
+        },
+    );
+
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 648.0,
+    };
+
+    let mut doc =
+        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    let result =
+        doc.fit_textflow(&mut tf, &rect).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    assert!(contains(&bytes, b"/F5 12 Tf"));
+    assert!(contains(&bytes, b"(Times) Tj"));
+}
+
+#[test]
+fn courier_font_in_textflow() {
+    let mut tf = TextFlow::new();
+    tf.add_text(
+        "Code",
+        &TextStyle {
+            font: BuiltinFont::Courier,
+            ..Default::default()
+        },
+    );
+
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 648.0,
+    };
+
+    let mut doc =
+        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    let result =
+        doc.fit_textflow(&mut tf, &rect).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    assert!(contains(&bytes, b"/F9 12 Tf"));
+    assert!(contains(&bytes, b"(Code) Tj"));
+}
+
+#[test]
+fn place_text_styled_uses_correct_font() {
+    let mut doc =
+        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    doc.place_text_styled(
+        "Styled",
+        72.0,
+        720.0,
+        &TextStyle {
+            font: BuiltinFont::TimesBold,
+            font_size: 18.0,
+        },
+    );
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert!(contains(&bytes, b"/F6 18 Tf"));
+    assert!(contains(&bytes, b"(Styled) Tj"));
 }
