@@ -372,3 +372,34 @@ Based on research findings in Issue 6, implement TrueType font handling. Allows 
 complete
 
 ---
+
+# Issue 9: Implement line graphics
+## Description
+The library should support the ability to create basic line graphics. We will need to first design the api for this and then implement it.
+
+Ideas for api design (psuedo code):
+```ts
+let doc = PdfDocument.create("outfile.pdf")
+doc.begin_page(612.0, 792.0);
+
+let x = 20;
+let y = 20;
+doc.move_to(x, y);
+doc.lineto(x, y = y + 10);
+doc.lineto(x = x + 10, y);
+doc.lineto(x, y = y - 10);
+doc.stroke(color: "rgb 0 .5 .5");
+``
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and status
+- [x] Task 2: Create Color struct in `pdf-core/src/graphics.rs`
+- [x] Task 3: Add 12 graphics methods to `PdfDocument`
+- [x] Task 4: Write tests in `pdf-core/tests/graphics_test.rs`
+- [x] Task 5: Update PHP extension in `pdf-php/src/lib.rs`
+- [x] Task 6: Update PHP stubs in `pdf-php/pdf-php.stubs.php`
+- [x] Task 7: Create example `pdf-core/examples/generate_graphics.rs`
+- [x] Task 8: Create documentation `docs/features/line-graphics.md`
+
+## Status
+complete

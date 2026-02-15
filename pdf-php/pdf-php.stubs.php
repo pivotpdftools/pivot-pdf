@@ -7,6 +7,29 @@
  * autocompletion for IDEs (PhpStorm, Intelephense, etc.).
  */
 
+class Color
+{
+    public float $r;
+    public float $g;
+    public float $b;
+
+    /**
+     * Create an RGB color.
+     *
+     * @param float $r Red component (0.0–1.0)
+     * @param float $g Green component (0.0–1.0)
+     * @param float $b Blue component (0.0–1.0)
+     */
+    public function __construct(float $r, float $g, float $b) {}
+
+    /**
+     * Create a grayscale color (r = g = b = level).
+     *
+     * @param float $level Gray level (0.0–1.0)
+     */
+    public static function gray(float $level): self {}
+}
+
 class TextStyle
 {
     public string $font_name;
@@ -155,6 +178,110 @@ class PdfDocument
         TextFlow $flow,
         Rect $rect
     ): string {}
+
+    // -------------------------------------------------------
+    // Graphics operations
+    // -------------------------------------------------------
+
+    /**
+     * Set the stroke color.
+     *
+     * @param Color $color The stroke color
+     * @throws \Exception if the document has already ended
+     */
+    public function setStrokeColor(Color $color): void {}
+
+    /**
+     * Set the fill color.
+     *
+     * @param Color $color The fill color
+     * @throws \Exception if the document has already ended
+     */
+    public function setFillColor(Color $color): void {}
+
+    /**
+     * Set the line width.
+     *
+     * @param float $width Line width in points
+     * @throws \Exception if the document has already ended
+     */
+    public function setLineWidth(float $width): void {}
+
+    /**
+     * Move to a point without drawing.
+     *
+     * @param float $x X coordinate
+     * @param float $y Y coordinate
+     * @throws \Exception if the document has already ended
+     */
+    public function moveTo(float $x, float $y): void {}
+
+    /**
+     * Draw a line from the current point.
+     *
+     * @param float $x X coordinate of the end point
+     * @param float $y Y coordinate of the end point
+     * @throws \Exception if the document has already ended
+     */
+    public function lineTo(float $x, float $y): void {}
+
+    /**
+     * Append a rectangle to the path.
+     *
+     * @param float $x      X coordinate of the lower-left corner
+     * @param float $y      Y coordinate of the lower-left corner
+     * @param float $width  Width of the rectangle
+     * @param float $height Height of the rectangle
+     * @throws \Exception if the document has already ended
+     */
+    public function rect(
+        float $x,
+        float $y,
+        float $width,
+        float $height
+    ): void {}
+
+    /**
+     * Close the current subpath.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function closePath(): void {}
+
+    /**
+     * Stroke the current path.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function stroke(): void {}
+
+    /**
+     * Fill the current path.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function fill(): void {}
+
+    /**
+     * Fill and stroke the current path.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function fillStroke(): void {}
+
+    /**
+     * Save the graphics state.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function saveState(): void {}
+
+    /**
+     * Restore the graphics state.
+     *
+     * @throws \Exception if the document has already ended
+     */
+    public function restoreState(): void {}
 
     /**
      * End the current page.

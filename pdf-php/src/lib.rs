@@ -5,8 +5,49 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pdf_core::{
-    BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle, TrueTypeFontId,
+    BuiltinFont, Color, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle, TrueTypeFontId,
 };
+
+// ----------------------------------------------------------
+// Color
+// ----------------------------------------------------------
+
+/// PHP class: Color
+///
+/// ```php
+/// $red = new Color(1.0, 0.0, 0.0);
+/// $gray = Color::gray(0.5);
+/// ```
+#[php_class(name = "Color")]
+pub struct PhpColor {
+    #[prop]
+    pub r: f64,
+    #[prop]
+    pub g: f64,
+    #[prop]
+    pub b: f64,
+}
+
+#[php_impl]
+impl PhpColor {
+    pub fn __construct(r: f64, g: f64, b: f64) -> Self {
+        PhpColor { r, g, b }
+    }
+
+    pub fn gray(level: f64) -> Self {
+        PhpColor {
+            r: level,
+            g: level,
+            b: level,
+        }
+    }
+}
+
+impl PhpColor {
+    fn to_core(&self) -> Color {
+        Color::rgb(self.r, self.g, self.b)
+    }
+}
 
 // ----------------------------------------------------------
 // TextStyle
@@ -294,6 +335,94 @@ impl PhpPdfDocument {
                     "box_empty".to_string()
                 }
             })
+        })
+    }
+
+    // -------------------------------------------------------
+    // Graphics operations
+    // -------------------------------------------------------
+
+    pub fn set_stroke_color(&mut self, color: &PhpColor) -> Result<(), String> {
+        with_doc!(self, set_stroke_color, doc => {
+            doc.set_stroke_color(color.to_core());
+            Ok(())
+        })
+    }
+
+    pub fn set_fill_color(&mut self, color: &PhpColor) -> Result<(), String> {
+        with_doc!(self, set_fill_color, doc => {
+            doc.set_fill_color(color.to_core());
+            Ok(())
+        })
+    }
+
+    pub fn set_line_width(&mut self, width: f64) -> Result<(), String> {
+        with_doc!(self, set_line_width, doc => {
+            doc.set_line_width(width);
+            Ok(())
+        })
+    }
+
+    pub fn move_to(&mut self, x: f64, y: f64) -> Result<(), String> {
+        with_doc!(self, move_to, doc => {
+            doc.move_to(x, y);
+            Ok(())
+        })
+    }
+
+    pub fn line_to(&mut self, x: f64, y: f64) -> Result<(), String> {
+        with_doc!(self, line_to, doc => {
+            doc.line_to(x, y);
+            Ok(())
+        })
+    }
+
+    pub fn rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+        with_doc!(self, rect, doc => {
+            doc.rect(x, y, width, height);
+            Ok(())
+        })
+    }
+
+    pub fn close_path(&mut self) -> Result<(), String> {
+        with_doc!(self, close_path, doc => {
+            doc.close_path();
+            Ok(())
+        })
+    }
+
+    pub fn stroke(&mut self) -> Result<(), String> {
+        with_doc!(self, stroke, doc => {
+            doc.stroke();
+            Ok(())
+        })
+    }
+
+    pub fn fill(&mut self) -> Result<(), String> {
+        with_doc!(self, fill, doc => {
+            doc.fill();
+            Ok(())
+        })
+    }
+
+    pub fn fill_stroke(&mut self) -> Result<(), String> {
+        with_doc!(self, fill_stroke, doc => {
+            doc.fill_stroke();
+            Ok(())
+        })
+    }
+
+    pub fn save_state(&mut self) -> Result<(), String> {
+        with_doc!(self, save_state, doc => {
+            doc.save_state();
+            Ok(())
+        })
+    }
+
+    pub fn restore_state(&mut self) -> Result<(), String> {
+        with_doc!(self, restore_state, doc => {
+            doc.restore_state();
+            Ok(())
         })
     }
 

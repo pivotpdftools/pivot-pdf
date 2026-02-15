@@ -5,6 +5,7 @@ use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
 use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
+use crate::graphics::Color;
 use crate::objects::{ObjId, PdfObject};
 use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
 use crate::truetype::TrueTypeFont;
@@ -207,6 +208,152 @@ impl<W: Write> PdfDocument<W> {
         Ok(result)
     }
 
+    // -------------------------------------------------------
+    // Graphics operations
+    // -------------------------------------------------------
+
+    /// Set the stroke color (PDF `RG` operator).
+    pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("set_stroke_color called with no open page");
+        let ops = format!(
+            "{} {} {} RG\n",
+            format_coord(color.r),
+            format_coord(color.g),
+            format_coord(color.b),
+        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Set the fill color (PDF `rg` operator).
+    pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("set_fill_color called with no open page");
+        let ops = format!(
+            "{} {} {} rg\n",
+            format_coord(color.r),
+            format_coord(color.g),
+            format_coord(color.b),
+        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Set the line width (PDF `w` operator).
+    pub fn set_line_width(&mut self, width: f64) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("set_line_width called with no open page");
+        let ops = format!("{} w\n", format_coord(width));
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Move to a point without drawing (PDF `m` operator).
+    pub fn move_to(&mut self, x: f64, y: f64) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("move_to called with no open page");
+        let ops = format!("{} {} m\n", format_coord(x), format_coord(y));
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Draw a line from the current point (PDF `l` operator).
+    pub fn line_to(&mut self, x: f64, y: f64) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("line_to called with no open page");
+        let ops = format!("{} {} l\n", format_coord(x), format_coord(y));
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Append a rectangle to the path (PDF `re` operator).
+    pub fn rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("rect called with no open page");
+        let ops = format!(
+            "{} {} {} {} re\n",
+            format_coord(x),
+            format_coord(y),
+            format_coord(width),
+            format_coord(height),
+        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Close the current subpath (PDF `h` operator).
+    pub fn close_path(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("close_path called with no open page");
+        page.content_ops.extend_from_slice(b"h\n");
+        self
+    }
+
+    /// Stroke the current path (PDF `S` operator).
+    pub fn stroke(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("stroke called with no open page");
+        page.content_ops.extend_from_slice(b"S\n");
+        self
+    }
+
+    /// Fill the current path (PDF `f` operator).
+    pub fn fill(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("fill called with no open page");
+        page.content_ops.extend_from_slice(b"f\n");
+        self
+    }
+
+    /// Fill and stroke the current path (PDF `B` operator).
+    pub fn fill_stroke(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("fill_stroke called with no open page");
+        page.content_ops.extend_from_slice(b"B\n");
+        self
+    }
+
+    /// Save the graphics state (PDF `q` operator).
+    pub fn save_state(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("save_state called with no open page");
+        page.content_ops.extend_from_slice(b"q\n");
+        self
+    }
+
+    /// Restore the graphics state (PDF `Q` operator).
+    pub fn restore_state(&mut self) -> &mut Self {
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("restore_state called with no open page");
+        page.content_ops.extend_from_slice(b"Q\n");
+        self
+    }
+
     /// Ensure a builtin font's dictionary object has been written.
     fn ensure_font_written(&mut self, font: BuiltinFont) -> io::Result<ObjId> {
         if let Some(&id) = self.font_obj_ids.get(&font) {
@@ -363,8 +510,14 @@ impl<W: Write> PdfDocument<W> {
                 ),
                 ("ItalicAngle", PdfObject::Real(font.italic_angle)),
                 ("Ascent", PdfObject::Integer(font.scale_to_pdf(font.ascent))),
-                ("Descent", PdfObject::Integer(font.scale_to_pdf(font.descent))),
-                ("CapHeight", PdfObject::Integer(font.scale_to_pdf(font.cap_height))),
+                (
+                    "Descent",
+                    PdfObject::Integer(font.scale_to_pdf(font.descent)),
+                ),
+                (
+                    "CapHeight",
+                    PdfObject::Integer(font.scale_to_pdf(font.cap_height)),
+                ),
                 ("StemV", PdfObject::Integer(font.scale_to_pdf(font.stem_v))),
                 ("FontFile2", PdfObject::Reference(obj_ids_file)),
             ]);
