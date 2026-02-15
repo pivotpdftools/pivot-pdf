@@ -1,2 +1,8 @@
 # Rust build artifacts
 /target/
+
+/sample_output.pdf
+/textflow_output.pdf
+/truetype_output.pdf
+/pdf-php/tests/php-textflow_output.pdf
+/pdf-php/tests/php-truetype_output.pdf
