@@ -1,7 +1,4 @@
-use pdf_core::{
-    BuiltinFont, FitResult, PdfDocument, Rect, TextFlow,
-    TextStyle,
-};
+use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 
 fn main() {
     let path = "textflow_output.pdf";
@@ -9,19 +6,10 @@ fn main() {
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "TextFlow Example");
 
-    let bold = TextStyle {
-        font: BuiltinFont::HelveticaBold,
-        ..Default::default()
-    };
+    let bold = TextStyle::builtin(BuiltinFont::HelveticaBold, 12.0);
     let normal = TextStyle::default();
-    let times = TextStyle {
-        font: BuiltinFont::TimesRoman,
-        font_size: 11.0,
-    };
-    let courier = TextStyle {
-        font: BuiltinFont::Courier,
-        font_size: 10.0,
-    };
+    let times = TextStyle::builtin(BuiltinFont::TimesRoman, 11.0);
+    let courier = TextStyle::builtin(BuiltinFont::Courier, 10.0);
 
     let mut tf = TextFlow::new();
     tf.add_text("TextFlow Demo\n\n", &bold);
@@ -50,10 +38,7 @@ fn main() {
     // Generate several paragraphs of text to fill multiple
     // pages.
     for i in 1..=6 {
-        tf.add_text(
-            &format!("Section {}\n", i),
-            &bold,
-        );
+        tf.add_text(&format!("Section {}\n", i), &bold);
         tf.add_text(
             "Lorem ipsum dolor sit amet, consectetur \
              adipiscing elit. Sed do eiusmod tempor \
@@ -98,8 +83,7 @@ fn main() {
     let mut page_count = 0;
     loop {
         doc.begin_page(612.0, 792.0);
-        let result =
-            doc.fit_textflow(&mut tf, &rect).unwrap();
+        let result = doc.fit_textflow(&mut tf, &rect).unwrap();
         doc.end_page().unwrap();
         page_count += 1;
 
@@ -107,17 +91,12 @@ fn main() {
             FitResult::Stop => break,
             FitResult::BoxFull => continue,
             FitResult::BoxEmpty => {
-                eprintln!(
-                    "Warning: bounding box too small",
-                );
+                eprintln!("Warning: bounding box too small",);
                 break;
             }
         }
     }
 
     doc.end_document().unwrap();
-    println!(
-        "Generated: {} ({} pages)",
-        path, page_count,
-    );
+    println!("Generated: {} ({} pages)", path, page_count,);
 }

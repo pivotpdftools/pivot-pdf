@@ -38,19 +38,14 @@ fn write_dictionary() {
     ]);
     w.write_object(ObjId(1, 0), &obj).unwrap();
     let output = String::from_utf8_lossy(&buf);
-    assert!(output.contains(
-        "<< /Type /Catalog /Pages 2 0 R >>"
-    ));
+    assert!(output.contains("<< /Type /Catalog /Pages 2 0 R >>"));
 }
 
 #[test]
 fn write_array() {
     let mut buf = Vec::new();
     let mut w = PdfWriter::new(&mut buf);
-    let obj = PdfObject::array(vec![
-        PdfObject::reference(3, 0),
-        PdfObject::reference(6, 0),
-    ]);
+    let obj = PdfObject::array(vec![PdfObject::reference(3, 0), PdfObject::reference(6, 0)]);
     w.write_object(ObjId(1, 0), &obj).unwrap();
     let output = String::from_utf8_lossy(&buf);
     assert!(output.contains("[3 0 R 6 0 R]"));
@@ -113,16 +108,10 @@ fn trailer_has_required_keys() {
     w.write_header().unwrap();
     let cat = PdfObject::name("Catalog");
     w.write_object(ObjId(1, 0), &cat).unwrap();
-    let info = PdfObject::dict(vec![(
-        "Creator",
-        PdfObject::literal_string("test"),
-    )]);
+    let info = PdfObject::dict(vec![("Creator", PdfObject::literal_string("test"))]);
     w.write_object(ObjId(2, 0), &info).unwrap();
-    w.write_xref_and_trailer(
-        ObjId(1, 0),
-        Some(ObjId(2, 0)),
-    )
-    .unwrap();
+    w.write_xref_and_trailer(ObjId(1, 0), Some(ObjId(2, 0)))
+        .unwrap();
 
     let output = String::from_utf8_lossy(&buf);
     assert!(output.contains("/Size 3"));
@@ -143,13 +132,14 @@ fn real_value_formatting() {
     for (val, expected) in cases {
         let mut buf = Vec::new();
         let mut w = PdfWriter::new(&mut buf);
-        w.write_object(ObjId(1, 0), &PdfObject::Real(val))
-            .unwrap();
+        w.write_object(ObjId(1, 0), &PdfObject::Real(val)).unwrap();
         let output = String::from_utf8_lossy(&buf);
         assert!(
             output.contains(expected),
             "Real({}) should contain '{}', got: {}",
-            val, expected, output
+            val,
+            expected,
+            output
         );
     }
 }
@@ -158,8 +148,5 @@ fn real_value_formatting() {
 fn escape_special_chars() {
     assert_eq!(escape_pdf_string("hello"), "hello");
     assert_eq!(escape_pdf_string("a(b)c"), "a\\(b\\)c");
-    assert_eq!(
-        escape_pdf_string("back\\slash"),
-        "back\\\\slash"
-    );
+    assert_eq!(escape_pdf_string("back\\slash"), "back\\\\slash");
 }

@@ -50,10 +50,7 @@ impl PdfObject {
         )
     }
 
-    pub fn stream(
-        dict_entries: Vec<(&str, PdfObject)>,
-        data: Vec<u8>,
-    ) -> Self {
+    pub fn stream(dict_entries: Vec<(&str, PdfObject)>, data: Vec<u8>) -> Self {
         PdfObject::Stream {
             dict: dict_entries
                 .into_iter()

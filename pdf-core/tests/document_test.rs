@@ -6,8 +6,7 @@ use pdf_core::PdfDocument;
 
 #[test]
 fn create_empty_document() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
@@ -18,8 +17,7 @@ fn create_empty_document() {
 
 #[test]
 fn set_info_appears_in_output() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "Test Doc");
     doc.begin_page(612.0, 792.0);
@@ -32,8 +30,7 @@ fn set_info_appears_in_output() {
 
 #[test]
 fn place_text_in_content_stream() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 20.0, 20.0);
     doc.end_page().unwrap();
@@ -55,10 +52,7 @@ fn end_page_flushes_to_writer() {
     }
 
     impl Write for TrackingWriter {
-        fn write(
-            &mut self,
-            buf: &[u8],
-        ) -> io::Result<usize> {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
             let n = self.inner.write(buf)?;
             *self.byte_count.borrow_mut() += n;
             Ok(n)
@@ -91,8 +85,7 @@ fn end_page_flushes_to_writer() {
 
 #[test]
 fn auto_close_page_on_begin_page() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Page 1", 20.0, 20.0);
     // begin_page again without end_page.
@@ -106,8 +99,7 @@ fn auto_close_page_on_begin_page() {
 
 #[test]
 fn auto_close_page_on_end_document() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 20.0, 20.0);
     // end_document without end_page.
@@ -122,8 +114,7 @@ fn auto_close_page_on_end_document() {
 /// fractional values should retain necessary precision.
 #[test]
 fn coord_formatting_in_content_stream() {
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("test", 20.0, 612.0);
     doc.end_page().unwrap();
@@ -132,8 +123,7 @@ fn coord_formatting_in_content_stream() {
     // Integer coords should not have decimal points.
     assert!(output.contains("20 612 Td"));
 
-    let mut doc =
-        PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("test", 12.5, 0.0);
     doc.end_page().unwrap();

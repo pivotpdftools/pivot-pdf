@@ -40,25 +40,16 @@ impl<W: Write> PdfWriter<W> {
     }
 
     /// Write an indirect object, recording its byte offset for xref.
-    pub fn write_object(
-        &mut self,
-        id: ObjId,
-        obj: &PdfObject,
-    ) -> io::Result<()> {
+    pub fn write_object(&mut self, id: ObjId, obj: &PdfObject) -> io::Result<()> {
         self.xref_entries.push((id.0, self.offset));
-        self.write_str(
-            &format!("{} {} obj\n", id.0, id.1),
-        )?;
+        self.write_str(&format!("{} {} obj\n", id.0, id.1))?;
         self.write_pdf_object(obj)?;
         self.write_str("\nendobj\n")?;
         Ok(())
     }
 
     /// Serialize a PdfObject to its PDF text representation.
-    fn write_pdf_object(
-        &mut self,
-        obj: &PdfObject,
-    ) -> io::Result<()> {
+    fn write_pdf_object(&mut self, obj: &PdfObject) -> io::Result<()> {
         match obj {
             PdfObject::Null => self.write_str("null"),
             PdfObject::Boolean(b) => {
@@ -68,9 +59,7 @@ impl<W: Write> PdfWriter<W> {
                     self.write_str("false")
                 }
             }
-            PdfObject::Integer(n) => {
-                self.write_str(&n.to_string())
-            }
+            PdfObject::Integer(n) => self.write_str(&n.to_string()),
             PdfObject::Real(f) => {
                 let s = format_real(*f);
                 self.write_str(&s)
@@ -118,11 +107,7 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(data)?;
                 self.write_str("\nendstream")
             }
-            PdfObject::Reference(id) => {
-                self.write_str(
-                    &format!("{} {} R", id.0, id.1),
-                )
-            }
+            PdfObject::Reference(id) => self.write_str(&format!("{} {} R", id.0, id.1)),
         }
     }
 
@@ -140,27 +125,19 @@ impl<W: Write> PdfWriter<W> {
         let xref_offset = self.offset;
 
         // Sort xref entries by object number.
-        self.xref_entries
-            .sort_by_key(|&(num, _)| num);
+        self.xref_entries.sort_by_key(|&(num, _)| num);
 
-        let max_obj = self
-            .xref_entries
-            .last()
-            .map(|&(num, _)| num)
-            .unwrap_or(0);
+        let max_obj = self.xref_entries.last().map(|&(num, _)| num).unwrap_or(0);
         let size = max_obj + 1;
 
         self.write_str("xref\n")?;
         self.write_str(&format!("0 {}\n", size))?;
 
         // Object 0: free entry head (exactly 20 bytes).
-        self.write_bytes(
-            b"0000000000 65535 f\r\n",
-        )?;
+        self.write_bytes(b"0000000000 65535 f\r\n")?;
 
         // Build a map for quick lookup.
-        let mut offset_map =
-            std::collections::HashMap::new();
+        let mut offset_map = std::collections::HashMap::new();
         for &(num, off) in &self.xref_entries {
             offset_map.insert(num, off);
         }
@@ -168,16 +145,11 @@ impl<W: Write> PdfWriter<W> {
         // Write entries for objects 1..max_obj.
         for obj_num in 1..size {
             if let Some(&off) = offset_map.get(&obj_num) {
-                let entry = format!(
-                    "{:010} {:05} n\r\n",
-                    off, 0
-                );
+                let entry = format!("{:010} {:05} n\r\n", off, 0);
                 self.write_bytes(entry.as_bytes())?;
             } else {
                 // Free entry for gaps.
-                self.write_bytes(
-                    b"0000000000 00000 f\r\n",
-                )?;
+                self.write_bytes(b"0000000000 00000 f\r\n")?;
             }
         }
 
@@ -188,10 +160,7 @@ impl<W: Write> PdfWriter<W> {
             size, root_id.0, root_id.1,
         ))?;
         if let Some(info) = info_id {
-            self.write_str(&format!(
-                " /Info {} {} R",
-                info.0, info.1,
-            ))?;
+            self.write_str(&format!(" /Info {} {} R", info.0, info.1,))?;
         }
         self.write_str(" >>\n")?;
 

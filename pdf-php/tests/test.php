@@ -168,12 +168,12 @@ echo "Test 3 (textflow) $outFile: OK\n";
 // Test 4: TextStyle defaults
 // ----------------------------------------------------------
 $style = new TextStyle();
-assert_true($style->font === "Helvetica", "Default font is Helvetica");
+assert_true($style->font_name === "Helvetica", "Default font is Helvetica");
 assert_true($style->font_size === 12.0, "Default font_size is 12.0");
 
 $style2 = new TextStyle("Helvetica-Bold", 18.0);
 assert_true(
-    $style2->font === "Helvetica-Bold",
+    $style2->font_name === "Helvetica-Bold",
     "Custom font is Helvetica-Bold"
 );
 assert_true($style2->font_size === 18.0, "Custom font_size is 18.0");
@@ -228,6 +228,141 @@ assert_true(
 );
 
 echo "Test 7 (Times-Roman): OK\n";
+
+// ----------------------------------------------------------
+// Test 8: TrueType font (mirrors generate_truetype.rs)
+// ----------------------------------------------------------
+$outFile = __DIR__ . '/php-truetype_output.pdf';
+$fontPath = __DIR__ . '/../../pdf-core/tests/fixtures/DejaVuSans.ttf';
+$doc = PdfDocument::create($outFile);
+$doc->setInfo("Creator", "rust-pdf-php-test");
+$doc->setInfo("Title", "TrueType Font Example");
+
+$ttHandle = $doc->loadFontFile($fontPath);
+assert_true(is_int($ttHandle), "loadFontFile returns int handle");
+assert_true($ttHandle >= 0, "Font handle is non-negative");
+
+$ttStyle = TextStyle::truetype($ttHandle, 14.0);
+$ttSmall = TextStyle::truetype($ttHandle, 11.0);
+$builtin = new TextStyle();
+$bold = new TextStyle("Helvetica-Bold", 14.0);
+
+// --- Page 1: Direct text placement via TextFlow ---
+$tf1 = new TextFlow();
+$tf1->addText("TrueType Font Demo\n", $bold);
+$tf1->addText(
+    "This line uses an embedded TrueType font (DejaVu Sans).\n",
+    $ttStyle
+);
+$tf1->addText("This line uses builtin Helvetica.\n", $builtin);
+$tf1->addText(
+    "Mixed fonts on the same page work correctly.\n",
+    $ttSmall
+);
+
+$rect = new Rect(72.0, 720.0, 468.0, 648.0);
+$doc->beginPage(612.0, 792.0);
+$result = $doc->fitTextflow($tf1, $rect);
+$doc->endPage();
+assert_true($result === "stop", "TT page 1 textflow stops");
+
+// --- Pages 2+: TextFlow with mixed fonts ---
+$tf2 = new TextFlow();
+$tf2->addText(
+    "TextFlow with TrueType\n\n",
+    TextStyle::truetype($ttHandle, 16.0)
+);
+$tf2->addText(
+    "This paragraph is set in DejaVu Sans via an "
+    . "embedded TrueType font. The text flows naturally "
+    . "within the bounding box and wraps at word "
+    . "boundaries just like builtin fonts.\n\n",
+    $ttStyle
+);
+$tf2->addText("Mixing fonts: ", $builtin);
+$tf2->addText("this is Helvetica, ", $builtin);
+$tf2->addText("and this is DejaVu Sans. ", $ttStyle);
+$tf2->addText(
+    "Both can appear in the same TextFlow.\n\n",
+    $builtin
+);
+
+for ($i = 1; $i <= 4; $i++) {
+    $tf2->addText("Section $i ", $bold);
+    $tf2->addText(
+        "Lorem ipsum dolor sit amet, consectetur "
+        . "adipiscing elit. Sed do eiusmod tempor "
+        . "incididunt ut labore et dolore magna aliqua. "
+        . "Ut enim ad minim veniam, quis nostrud "
+        . "exercitation ullamco laboris nisi ut aliquip "
+        . "ex ea commodo consequat.\n\n",
+        $ttSmall
+    );
+}
+
+$tf2->addText("End of document.", $bold);
+
+$pageCount = 1; // already wrote page 1
+while (true) {
+    $doc->beginPage(612.0, 792.0);
+    $result = $doc->fitTextflow($tf2, $rect);
+    $doc->endPage();
+    $pageCount++;
+
+    if ($result === "stop") break;
+    if ($result === "box_empty") break;
+}
+
+$doc->endDocument();
+
+assert_true(
+    $pageCount > 1,
+    "TT TextFlow spans multiple pages (got $pageCount)"
+);
+assert_true(
+    $result === "stop",
+    "TT TextFlow finished with 'stop'"
+);
+
+$bytes = file_get_contents($outFile);
+assert_true(
+    str_starts_with($bytes, '%PDF-'),
+    "TT PDF starts with %PDF-"
+);
+// Type0 composite font structure
+assert_true(
+    str_contains($bytes, '/Subtype /Type0'),
+    "TT PDF contains Type0 font"
+);
+assert_true(
+    str_contains($bytes, '/Subtype /CIDFontType2'),
+    "TT PDF contains CIDFontType2"
+);
+assert_true(
+    str_contains($bytes, '/Type /FontDescriptor'),
+    "TT PDF contains FontDescriptor"
+);
+assert_true(
+    str_contains($bytes, '/Encoding /Identity-H'),
+    "TT PDF has Identity-H encoding"
+);
+// ToUnicode CMap for copy/paste support
+assert_true(
+    str_contains($bytes, 'beginbfchar'),
+    "TT PDF has ToUnicode CMap"
+);
+// Hex-encoded glyph IDs (TrueType text)
+assert_true(
+    str_contains($bytes, '> Tj'),
+    "TT PDF has hex-encoded text"
+);
+// Builtin font also present (mixed page)
+assert_true(
+    str_contains($bytes, '/Subtype /Type1'),
+    "TT PDF also contains builtin Type1 font"
+);
+
+echo "Test 8 (TrueType) $outFile: OK\n";
 
 // ----------------------------------------------------------
 // Summary

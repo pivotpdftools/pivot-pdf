@@ -9,10 +9,13 @@
 
 class TextStyle
 {
-    public string $font;
+    public string $font_name;
     public float $font_size;
+    public int $font_handle;
 
     /**
+     * Create a TextStyle with a builtin font name.
+     *
      * @param string $font      Font name (default: "Helvetica").
      *                           Valid names: Helvetica, Helvetica-Bold,
      *                           Helvetica-Oblique, Helvetica-BoldOblique,
@@ -26,6 +29,18 @@ class TextStyle
         string $font = 'Helvetica',
         float $font_size = 12.0
     ) {}
+
+    /**
+     * Create a TextStyle for a TrueType font loaded via
+     * PdfDocument::loadFontFile().
+     *
+     * @param int   $handle    Font handle returned by loadFontFile()
+     * @param float $font_size Font size in points (default: 12.0)
+     */
+    public static function truetype(
+        int $handle,
+        float $font_size = 12.0
+    ): self {}
 }
 
 class Rect
@@ -83,6 +98,18 @@ class PdfDocument
      * @throws \Exception on error
      */
     public static function createInMemory(): self {}
+
+    /**
+     * Load a TrueType font file (.ttf).
+     *
+     * Returns an integer font handle for use with
+     * TextStyle::truetype().
+     *
+     * @param string $path Path to the .ttf font file
+     * @return int Font handle
+     * @throws \Exception if the file cannot be read or parsed
+     */
+    public function loadFontFile(string $path): int {}
 
     /**
      * Set a document info entry (e.g. "Creator", "Title").

@@ -56,10 +56,7 @@ fn dict_constructor() {
 
 #[test]
 fn array_constructor() {
-    let obj = PdfObject::array(vec![
-        PdfObject::reference(3, 0),
-        PdfObject::reference(6, 0),
-    ]);
+    let obj = PdfObject::array(vec![PdfObject::reference(3, 0), PdfObject::reference(6, 0)]);
     match obj {
         PdfObject::Array(items) => assert_eq!(items.len(), 2),
         _ => panic!("expected Array"),
@@ -69,10 +66,7 @@ fn array_constructor() {
 #[test]
 fn stream_constructor() {
     let data = b"BT /F1 12 Tf ET".to_vec();
-    let obj = PdfObject::stream(
-        vec![("Filter", PdfObject::name("None"))],
-        data.clone(),
-    );
+    let obj = PdfObject::stream(vec![("Filter", PdfObject::name("None"))], data.clone());
     match obj {
         PdfObject::Stream { dict, data: d } => {
             assert_eq!(dict.len(), 1);

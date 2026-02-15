@@ -5,8 +5,7 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pdf_core::{
-    BuiltinFont, FitResult, PdfDocument, Rect, TextFlow,
-    TextStyle,
+    BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle, TrueTypeFontId,
 };
 
 // ----------------------------------------------------------
@@ -15,56 +14,73 @@ use pdf_core::{
 
 /// PHP class: TextStyle
 ///
+/// Builtin font (by name):
 /// ```php
-/// $style = new TextStyle();                    // defaults
-/// $style = new TextStyle("Helvetica-Bold");    // bold
-/// $style = new TextStyle("Times-Roman", 14.0); // Times 14pt
+/// $style = new TextStyle("Helvetica-Bold", 14.0);
+/// ```
+///
+/// TrueType font (by handle from loadFontFile):
+/// ```php
+/// $handle = $doc->loadFontFile("fonts/Roboto.ttf");
+/// $style = TextStyle::truetype($handle, 12.0);
 /// ```
 #[php_class(name = "TextStyle")]
 pub struct PhpTextStyle {
     #[prop]
-    pub font: String,
+    pub font_name: String,
     #[prop]
     pub font_size: f64,
+    /// -1 means builtin (use font_name), >= 0 means TrueType
+    #[prop]
+    pub font_handle: i64,
 }
 
 #[php_impl]
 impl PhpTextStyle {
-    pub fn __construct(
-        font: Option<String>,
-        font_size: Option<f64>,
-    ) -> Self {
+    /// Create a TextStyle with a builtin font name.
+    pub fn __construct(font: Option<String>, font_size: Option<f64>) -> Self {
         PhpTextStyle {
-            font: font.unwrap_or_else(|| {
-                "Helvetica".to_string()
-            }),
+            font_name: font.unwrap_or_else(|| "Helvetica".to_string()),
             font_size: font_size.unwrap_or(12.0),
+            font_handle: -1,
+        }
+    }
+
+    /// Create a TextStyle for a TrueType font handle.
+    pub fn truetype(handle: i64, font_size: Option<f64>) -> Self {
+        PhpTextStyle {
+            font_name: String::new(),
+            font_size: font_size.unwrap_or(12.0),
+            font_handle: handle,
         }
     }
 }
 
 impl PhpTextStyle {
     fn to_core(&self) -> Result<TextStyle, String> {
-        let builtin =
-            BuiltinFont::from_name(&self.font).ok_or_else(
-                || {
-                    format!(
-                        "Unknown font: '{}'. Valid names: \
-                         Helvetica, Helvetica-Bold, \
-                         Helvetica-Oblique, \
-                         Helvetica-BoldOblique, \
-                         Times-Roman, Times-Bold, \
-                         Times-Italic, Times-BoldItalic, \
-                         Courier, Courier-Bold, \
-                         Courier-Oblique, \
-                         Courier-BoldOblique, \
-                         Symbol, ZapfDingbats",
-                        self.font,
-                    )
-                },
-            )?;
+        let font_ref = if self.font_handle >= 0 {
+            FontRef::TrueType(TrueTypeFontId(self.font_handle as usize))
+        } else {
+            let builtin = BuiltinFont::from_name(&self.font_name).ok_or_else(|| {
+                format!(
+                    "Unknown font: '{}'. Valid names: \
+                     Helvetica, Helvetica-Bold, \
+                     Helvetica-Oblique, \
+                     Helvetica-BoldOblique, \
+                     Times-Roman, Times-Bold, \
+                     Times-Italic, Times-BoldItalic, \
+                     Courier, Courier-Bold, \
+                     Courier-Oblique, \
+                     Courier-BoldOblique, \
+                     Symbol, ZapfDingbats",
+                    self.font_name,
+                )
+            })?;
+            FontRef::Builtin(builtin)
+        };
+
         Ok(TextStyle {
-            font: builtin,
+            font: font_ref,
             font_size: self.font_size,
         })
     }
@@ -93,13 +109,13 @@ pub struct PhpRect {
 
 #[php_impl]
 impl PhpRect {
-    pub fn __construct(
-        x: f64,
-        y: f64,
-        width: f64,
-        height: f64,
-    ) -> Self {
-        PhpRect { x, y, width, height }
+    pub fn __construct(x: f64, y: f64, width: f64, height: f64) -> Self {
+        PhpRect {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -133,14 +149,12 @@ pub struct PhpTextFlow {
 #[php_impl]
 impl PhpTextFlow {
     pub fn __construct() -> Self {
-        PhpTextFlow { inner: TextFlow::new() }
+        PhpTextFlow {
+            inner: TextFlow::new(),
+        }
     }
 
-    pub fn add_text(
-        &mut self,
-        text: &str,
-        style: &PhpTextStyle,
-    ) -> Result<(), String> {
+    pub fn add_text(&mut self, text: &str, style: &PhpTextStyle) -> Result<(), String> {
         let core_style = style.to_core()?;
         self.inner.add_text(text, &core_style);
         Ok(())
@@ -170,10 +184,7 @@ macro_rules! with_doc {
                 DocumentInner::Memory($doc) => $body,
             },
             None => {
-                return Err(format!(
-                    "{}: document already ended",
-                    stringify!($name)
-                ));
+                return Err(format!("{}: document already ended", stringify!($name)));
             }
         }
     };
@@ -184,6 +195,10 @@ macro_rules! with_doc {
 /// ```php
 /// $doc = PdfDocument::create("out.pdf");
 /// $doc = PdfDocument::createInMemory();
+///
+/// // Load TrueType font
+/// $handle = $doc->loadFontFile("fonts/Roboto.ttf");
+/// $style = TextStyle::truetype($handle, 14.0);
 /// ```
 #[php_class(name = "PdfDocument")]
 pub struct PhpPdfDocument {
@@ -193,56 +208,57 @@ pub struct PhpPdfDocument {
 #[php_impl]
 impl PhpPdfDocument {
     pub fn create(path: &str) -> Result<Self, String> {
-        let doc = PdfDocument::create(path)
-            .map_err(|e| {
-                format!("create failed: {}", e)
-            })?;
+        let doc = PdfDocument::create(path).map_err(|e| format!("create failed: {}", e))?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::File(doc)),
         })
     }
 
     pub fn create_in_memory() -> Result<Self, String> {
-        let doc = PdfDocument::new(Vec::new())
-            .map_err(|e| {
-                format!(
-                    "create_in_memory failed: {}",
-                    e,
-                )
-            })?;
+        let doc =
+            PdfDocument::new(Vec::new()).map_err(|e| format!("create_in_memory failed: {}", e,))?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::Memory(doc)),
         })
     }
 
-    pub fn set_info(
-        &mut self,
-        key: &str,
-        value: &str,
-    ) -> Result<(), String> {
+    /// Load a TrueType font file. Returns an integer handle
+    /// for use with TextStyle::truetype().
+    pub fn load_font_file(&mut self, path: &str) -> Result<i64, String> {
+        with_doc!(self, load_font_file, doc => {
+            let font_ref = doc.load_font_file(path)
+                .map_err(|e| {
+                    format!(
+                        "load_font_file failed: {}",
+                        e,
+                    )
+                })?;
+            match font_ref {
+                FontRef::TrueType(id) => {
+                    Ok(id.0 as i64)
+                }
+                _ => Err(
+                    "Unexpected font type".to_string()
+                ),
+            }
+        })
+    }
+
+    pub fn set_info(&mut self, key: &str, value: &str) -> Result<(), String> {
         with_doc!(self, set_info, doc => {
             doc.set_info(key, value);
             Ok(())
         })
     }
 
-    pub fn begin_page(
-        &mut self,
-        width: f64,
-        height: f64,
-    ) -> Result<(), String> {
+    pub fn begin_page(&mut self, width: f64, height: f64) -> Result<(), String> {
         with_doc!(self, begin_page, doc => {
             doc.begin_page(width, height);
             Ok(())
         })
     }
 
-    pub fn place_text(
-        &mut self,
-        text: &str,
-        x: f64,
-        y: f64,
-    ) -> Result<(), String> {
+    pub fn place_text(&mut self, text: &str, x: f64, y: f64) -> Result<(), String> {
         with_doc!(self, place_text, doc => {
             doc.place_text(text, x, y);
             Ok(())
@@ -291,30 +307,19 @@ impl PhpPdfDocument {
 
     /// End the document. Returns null for file-based docs,
     /// or a binary string for in-memory docs.
-    pub fn end_document(
-        &mut self,
-    ) -> Result<Zval, String> {
-        let inner =
-            self.inner.take().ok_or_else(|| {
-                "end_document: document already ended"
-                    .to_string()
-            })?;
+    pub fn end_document(&mut self) -> Result<Zval, String> {
+        let inner = self
+            .inner
+            .take()
+            .ok_or_else(|| "end_document: document already ended".to_string())?;
         match inner {
             DocumentInner::File(doc) => {
                 let mut writer = doc
                     .end_document()
-                    .map_err(|e| {
-                        format!(
-                            "end_document failed: {}",
-                            e,
-                        )
-                    })?;
-                writer.flush().map_err(|e| {
-                    format!(
-                        "end_document flush failed: {}",
-                        e,
-                    )
-                })?;
+                    .map_err(|e| format!("end_document failed: {}", e,))?;
+                writer
+                    .flush()
+                    .map_err(|e| format!("end_document flush failed: {}", e,))?;
                 let mut zval = Zval::new();
                 zval.set_null();
                 Ok(zval)
@@ -322,12 +327,7 @@ impl PhpPdfDocument {
             DocumentInner::Memory(doc) => {
                 let bytes = doc
                     .end_document()
-                    .map_err(|e| {
-                        format!(
-                            "end_document failed: {}",
-                            e,
-                        )
-                    })?;
+                    .map_err(|e| format!("end_document failed: {}", e,))?;
                 let mut zval = Zval::new();
                 zval.set_binary(bytes);
                 Ok(zval)
@@ -337,8 +337,6 @@ impl PhpPdfDocument {
 }
 
 #[php_module]
-pub fn get_module(
-    module: ModuleBuilder,
-) -> ModuleBuilder {
+pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
     module
 }

@@ -1,9 +1,10 @@
-pub mod objects;
-pub mod writer;
 pub mod document;
 pub mod fonts;
+pub mod objects;
 pub mod textflow;
+pub mod truetype;
+pub mod writer;
 
 pub use document::PdfDocument;
-pub use fonts::BuiltinFont;
-pub use textflow::{TextFlow, TextStyle, FitResult, Rect};
+pub use fonts::{BuiltinFont, FontRef, TrueTypeFontId};
+pub use textflow::{FitResult, Rect, TextFlow, TextStyle};

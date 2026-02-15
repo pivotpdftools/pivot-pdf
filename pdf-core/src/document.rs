@@ -4,14 +4,24 @@ use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
-use crate::fonts::BuiltinFont;
+use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 use crate::objects::{ObjId, PdfObject};
 use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
+use crate::truetype::TrueTypeFont;
 use crate::writer::PdfWriter;
 
 const CATALOG_OBJ: ObjId = ObjId(1, 0);
 const PAGES_OBJ: ObjId = ObjId(2, 0);
 const FIRST_PAGE_OBJ_NUM: u32 = 3;
+
+/// Pre-allocated object IDs for a TrueType font's PDF objects.
+struct TrueTypeFontObjIds {
+    type0: ObjId,
+    cid_font: ObjId,
+    descriptor: ObjId,
+    font_file: ObjId,
+    tounicode: ObjId,
+}
 
 /// High-level API for building PDF documents.
 ///
@@ -27,9 +37,14 @@ pub struct PdfDocument<W: Write> {
     page_obj_ids: Vec<ObjId>,
     current_page: Option<PageBuilder>,
     next_obj_num: u32,
-    /// Maps each used font to the ObjId assigned when its
-    /// dictionary was first written.
+    /// Maps each used builtin font to its written ObjId.
     font_obj_ids: BTreeMap<BuiltinFont, ObjId>,
+    /// Loaded TrueType fonts.
+    truetype_fonts: Vec<TrueTypeFont>,
+    /// Pre-allocated ObjIds for TrueType fonts (by index).
+    truetype_font_obj_ids: BTreeMap<usize, TrueTypeFontObjIds>,
+    /// Next font number for PDF resource names (F15, F16, ...).
+    next_font_num: u32,
 }
 
 struct PageBuilder {
@@ -37,13 +52,12 @@ struct PageBuilder {
     height: f64,
     content_ops: Vec<u8>,
     used_fonts: BTreeSet<BuiltinFont>,
+    used_truetype_fonts: BTreeSet<usize>,
 }
 
 impl PdfDocument<BufWriter<File>> {
     /// Create a new PDF document that writes to a file.
-    pub fn create<P: AsRef<Path>>(
-        path: P,
-    ) -> io::Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = File::create(path)?;
         Self::new(BufWriter::new(file))
     }
@@ -63,30 +77,41 @@ impl<W: Write> PdfDocument<W> {
             current_page: None,
             next_obj_num: FIRST_PAGE_OBJ_NUM,
             font_obj_ids: BTreeMap::new(),
+            truetype_fonts: Vec::new(),
+            truetype_font_obj_ids: BTreeMap::new(),
+            next_font_num: 15,
         })
     }
 
     /// Set a document info entry (e.g. "Creator", "Title").
-    pub fn set_info(
-        &mut self,
-        key: &str,
-        value: &str,
-    ) -> &mut Self {
-        self.info
-            .push((key.to_string(), value.to_string()));
+    pub fn set_info(&mut self, key: &str, value: &str) -> &mut Self {
+        self.info.push((key.to_string(), value.to_string()));
         self
+    }
+
+    /// Load a TrueType font from a file path.
+    /// Returns a FontRef that can be used in TextStyle.
+    pub fn load_font_file<P: AsRef<Path>>(&mut self, path: P) -> Result<FontRef, String> {
+        let data =
+            std::fs::read(path.as_ref()).map_err(|e| format!("Failed to read font file: {}", e))?;
+        self.load_font_bytes(data)
+    }
+
+    /// Load a TrueType font from raw bytes.
+    /// Returns a FontRef that can be used in TextStyle.
+    pub fn load_font_bytes(&mut self, data: Vec<u8>) -> Result<FontRef, String> {
+        let font_num = self.next_font_num;
+        self.next_font_num += 1;
+        let font = TrueTypeFont::from_bytes(data, font_num)?;
+        let idx = self.truetype_fonts.len();
+        self.truetype_fonts.push(font);
+        Ok(FontRef::TrueType(TrueTypeFontId(idx)))
     }
 
     /// Begin a new page with the given dimensions in points.
     /// If a page is currently open, it is automatically closed.
-    pub fn begin_page(
-        &mut self,
-        width: f64,
-        height: f64,
-    ) -> &mut Self {
+    pub fn begin_page(&mut self, width: f64, height: f64) -> &mut Self {
         if self.current_page.is_some() {
-            // Auto-close previous page. Ignore write
-            // errors here; end_page will catch them.
             let _ = self.end_page();
         }
         self.current_page = Some(PageBuilder {
@@ -94,34 +119,27 @@ impl<W: Write> PdfDocument<W> {
             height,
             content_ops: Vec::new(),
             used_fonts: BTreeSet::new(),
+            used_truetype_fonts: BTreeSet::new(),
         });
         self
     }
 
     /// Place text at position (x, y) using default 12pt Helvetica.
     /// Coordinates use PDF's default bottom-left origin.
-    pub fn place_text(
-        &mut self,
-        text: &str,
-        x: f64,
-        y: f64,
-    ) -> &mut Self {
+    pub fn place_text(&mut self, text: &str, x: f64, y: f64) -> &mut Self {
         let page = self
             .current_page
             .as_mut()
             .expect("place_text called with no open page");
         page.used_fonts.insert(BuiltinFont::Helvetica);
-        let escaped =
-            crate::writer::escape_pdf_string(text);
+        let escaped = crate::writer::escape_pdf_string(text);
         let ops = format!(
             "BT\n/F1 12 Tf\n{} {} Td\n({}) Tj\nET\n",
             format_coord(x),
             format_coord(y),
             escaped,
         );
-        page.content_ops.extend_from_slice(
-            ops.as_bytes(),
-        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
         self
     }
 
@@ -134,56 +152,63 @@ impl<W: Write> PdfDocument<W> {
         y: f64,
         style: &TextStyle,
     ) -> &mut Self {
+        // Encode text before borrowing page mutably
+        let (font_name, text_op) = match style.font {
+            FontRef::Builtin(b) => {
+                let escaped = crate::writer::escape_pdf_string(text);
+                (b.pdf_name().to_string(), format!("({}) Tj", escaped))
+            }
+            FontRef::TrueType(id) => {
+                let font = &mut self.truetype_fonts[id.0];
+                let hex = font.encode_text_hex(text);
+                (font.pdf_name.clone(), format!("{} Tj", hex))
+            }
+        };
+
         let page = self
             .current_page
             .as_mut()
-            .expect(
-                "place_text_styled called with no open page",
-            );
-        page.used_fonts.insert(style.font);
-        let escaped =
-            crate::writer::escape_pdf_string(text);
+            .expect("place_text_styled called with no open page");
+
+        match style.font {
+            FontRef::Builtin(b) => {
+                page.used_fonts.insert(b);
+            }
+            FontRef::TrueType(id) => {
+                page.used_truetype_fonts.insert(id.0);
+            }
+        }
+
         let ops = format!(
-            "BT\n/{} {} Tf\n{} {} Td\n({}) Tj\nET\n",
-            style.font.pdf_name(),
+            "BT\n/{} {} Tf\n{} {} Td\n{}\nET\n",
+            font_name,
             format_coord(style.font_size),
             format_coord(x),
             format_coord(y),
-            escaped,
+            text_op,
         );
-        page.content_ops.extend_from_slice(
-            ops.as_bytes(),
-        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
         self
     }
 
     /// Fit a TextFlow into a bounding rectangle on the current
     /// page. The flow's cursor advances so subsequent calls
     /// continue where it left off (for multi-page flow).
-    pub fn fit_textflow(
-        &mut self,
-        flow: &mut TextFlow,
-        rect: &Rect,
-    ) -> io::Result<FitResult> {
+    pub fn fit_textflow(&mut self, flow: &mut TextFlow, rect: &Rect) -> io::Result<FitResult> {
+        let (ops, result, used_fonts) = flow.generate_content_ops(rect, &mut self.truetype_fonts);
+
         let page = self
             .current_page
             .as_mut()
-            .expect(
-                "fit_textflow called with no open page",
-            );
-        let (ops, result, fonts) =
-            flow.generate_content_ops(rect);
+            .expect("fit_textflow called with no open page");
         page.content_ops.extend_from_slice(&ops);
-        page.used_fonts.extend(fonts);
+        page.used_fonts.extend(used_fonts.builtin);
+        page.used_truetype_fonts.extend(used_fonts.truetype);
         Ok(result)
     }
 
-    /// Ensure a font's dictionary object has been written.
-    /// Returns the ObjId for the font.
-    fn ensure_font_written(
-        &mut self,
-        font: BuiltinFont,
-    ) -> io::Result<ObjId> {
+    /// Ensure a builtin font's dictionary object has been written.
+    fn ensure_font_written(&mut self, font: BuiltinFont) -> io::Result<ObjId> {
         if let Some(&id) = self.font_obj_ids.get(&font) {
             return Ok(id);
         }
@@ -192,14 +217,38 @@ impl<W: Write> PdfDocument<W> {
         let obj = PdfObject::dict(vec![
             ("Type", PdfObject::name("Font")),
             ("Subtype", PdfObject::name("Type1")),
-            (
-                "BaseFont",
-                PdfObject::name(font.pdf_base_name()),
-            ),
+            ("BaseFont", PdfObject::name(font.pdf_base_name())),
         ]);
         self.writer.write_object(id, &obj)?;
         self.font_obj_ids.insert(font, id);
         Ok(id)
+    }
+
+    /// Pre-allocate ObjIds for a TrueType font if not yet done.
+    fn ensure_tt_font_obj_ids(&mut self, idx: usize) -> &TrueTypeFontObjIds {
+        if !self.truetype_font_obj_ids.contains_key(&idx) {
+            let type0 = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            let cid_font = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            let descriptor = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            let font_file = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            let tounicode = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            self.truetype_font_obj_ids.insert(
+                idx,
+                TrueTypeFontObjIds {
+                    type0,
+                    cid_font,
+                    descriptor,
+                    font_file,
+                    tounicode,
+                },
+            );
+        }
+        &self.truetype_font_obj_ids[&idx]
     }
 
     /// End the current page. Writes page objects to the
@@ -210,46 +259,58 @@ impl<W: Write> PdfDocument<W> {
             .take()
             .expect("end_page called with no open page");
 
-        // Write font objects for any fonts not yet written.
+        // Write builtin font objects for any not yet written
         for &font in &page.used_fonts {
             self.ensure_font_written(font)?;
         }
 
-        let content_id =
-            ObjId(self.next_obj_num, 0);
+        // Pre-allocate ObjIds for TrueType fonts used on this page
+        for &idx in &page.used_truetype_fonts {
+            self.ensure_tt_font_obj_ids(idx);
+        }
+
+        let content_id = ObjId(self.next_obj_num, 0);
         self.next_obj_num += 1;
         let page_id = ObjId(self.next_obj_num, 0);
         self.next_obj_num += 1;
 
-        // Write content stream.
-        let content_stream = PdfObject::stream(
-            vec![],
-            page.content_ops,
-        );
-        self.writer
-            .write_object(content_id, &content_stream)?;
+        // Write content stream
+        let content_stream = PdfObject::stream(vec![], page.content_ops);
+        self.writer.write_object(content_id, &content_stream)?;
 
-        // Build font resource entries for only used fonts.
-        let font_entries: Vec<(&str, PdfObject)> =
-            page.used_fonts
-                .iter()
-                .map(|f| {
-                    (
-                        f.pdf_name(),
-                        PdfObject::Reference(
-                            self.font_obj_ids[f],
-                        ),
-                    )
-                })
-                .collect();
+        // Build font resource entries for builtin fonts
+        let font_entries: Vec<(&str, PdfObject)> = page
+            .used_fonts
+            .iter()
+            .map(|f| (f.pdf_name(), PdfObject::Reference(self.font_obj_ids[f])))
+            .collect();
 
-        // Write page dictionary.
+        // Add TrueType font entries (reference the Type0 obj)
+        // We need owned strings for the PDF names
+        let tt_entries: Vec<(String, PdfObject)> = page
+            .used_truetype_fonts
+            .iter()
+            .map(|&idx| {
+                let obj_ids = &self.truetype_font_obj_ids[&idx];
+                let name = self.truetype_fonts[idx].pdf_name.clone();
+                (name, PdfObject::Reference(obj_ids.type0))
+            })
+            .collect();
+
+        // Combine into a single dict. Since PdfObject::dict takes
+        // &str, we need to build the Dictionary variant directly.
+        let mut all_font_entries: Vec<(String, PdfObject)> = font_entries
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
+        all_font_entries.extend(tt_entries);
+
+        let font_dict = PdfObject::Dictionary(all_font_entries);
+
+        // Write page dictionary
         let page_dict = PdfObject::dict(vec![
             ("Type", PdfObject::name("Page")),
-            (
-                "Parent",
-                PdfObject::Reference(PAGES_OBJ),
-            ),
+            ("Parent", PdfObject::Reference(PAGES_OBJ)),
             (
                 "MediaBox",
                 PdfObject::array(vec![
@@ -259,50 +320,120 @@ impl<W: Write> PdfDocument<W> {
                     PdfObject::Real(page.height),
                 ]),
             ),
-            (
-                "Contents",
-                PdfObject::Reference(content_id),
-            ),
-            (
-                "Resources",
-                PdfObject::dict(vec![(
-                    "Font",
-                    PdfObject::dict(font_entries),
-                )]),
-            ),
+            ("Contents", PdfObject::Reference(content_id)),
+            ("Resources", PdfObject::dict(vec![("Font", font_dict)])),
         ]);
-        self.writer
-            .write_object(page_id, &page_dict)?;
+        self.writer.write_object(page_id, &page_dict)?;
 
         self.page_obj_ids.push(page_id);
         Ok(())
     }
 
+    /// Write all TrueType font objects. Called during
+    /// end_document, after all pages have been written.
+    fn write_truetype_fonts(&mut self) -> io::Result<()> {
+        let indices: Vec<usize> = self.truetype_font_obj_ids.keys().copied().collect();
+
+        for idx in indices {
+            let obj_ids_type0 = self.truetype_font_obj_ids[&idx].type0;
+            let obj_ids_cid = self.truetype_font_obj_ids[&idx].cid_font;
+            let obj_ids_desc = self.truetype_font_obj_ids[&idx].descriptor;
+            let obj_ids_file = self.truetype_font_obj_ids[&idx].font_file;
+            let obj_ids_tounicode = self.truetype_font_obj_ids[&idx].tounicode;
+
+            let font = &self.truetype_fonts[idx];
+
+            // 1. FontFile2 stream (raw .ttf data)
+            let font_file_stream = PdfObject::stream(vec![], font.font_data.clone());
+            self.writer.write_object(obj_ids_file, &font_file_stream)?;
+
+            // 2. FontDescriptor (values scaled to PDF units: 1/1000)
+            let descriptor = PdfObject::dict(vec![
+                ("Type", PdfObject::name("FontDescriptor")),
+                ("FontName", PdfObject::name(&font.postscript_name)),
+                ("Flags", PdfObject::Integer(font.flags as i64)),
+                (
+                    "FontBBox",
+                    PdfObject::array(vec![
+                        PdfObject::Integer(font.scale_to_pdf(font.bbox[0])),
+                        PdfObject::Integer(font.scale_to_pdf(font.bbox[1])),
+                        PdfObject::Integer(font.scale_to_pdf(font.bbox[2])),
+                        PdfObject::Integer(font.scale_to_pdf(font.bbox[3])),
+                    ]),
+                ),
+                ("ItalicAngle", PdfObject::Real(font.italic_angle)),
+                ("Ascent", PdfObject::Integer(font.scale_to_pdf(font.ascent))),
+                ("Descent", PdfObject::Integer(font.scale_to_pdf(font.descent))),
+                ("CapHeight", PdfObject::Integer(font.scale_to_pdf(font.cap_height))),
+                ("StemV", PdfObject::Integer(font.scale_to_pdf(font.stem_v))),
+                ("FontFile2", PdfObject::Reference(obj_ids_file)),
+            ]);
+            self.writer.write_object(obj_ids_desc, &descriptor)?;
+
+            // 3. CIDFontType2
+            let w_array = font.build_w_array();
+            let cid_font = PdfObject::dict(vec![
+                ("Type", PdfObject::name("Font")),
+                ("Subtype", PdfObject::name("CIDFontType2")),
+                ("BaseFont", PdfObject::name(&font.postscript_name)),
+                (
+                    "CIDSystemInfo",
+                    PdfObject::dict(vec![
+                        ("Registry", PdfObject::literal_string("Adobe")),
+                        ("Ordering", PdfObject::literal_string("Identity")),
+                        ("Supplement", PdfObject::Integer(0)),
+                    ]),
+                ),
+                ("FontDescriptor", PdfObject::Reference(obj_ids_desc)),
+                ("DW", PdfObject::Integer(font.default_width_pdf())),
+                ("W", PdfObject::Array(w_array)),
+            ]);
+            self.writer.write_object(obj_ids_cid, &cid_font)?;
+
+            // 4. ToUnicode CMap stream
+            let tounicode_data = font.build_tounicode_cmap();
+            let tounicode = PdfObject::stream(vec![], tounicode_data);
+            self.writer.write_object(obj_ids_tounicode, &tounicode)?;
+
+            // 5. Type0 font (top-level)
+            let type0 = PdfObject::dict(vec![
+                ("Type", PdfObject::name("Font")),
+                ("Subtype", PdfObject::name("Type0")),
+                ("BaseFont", PdfObject::name(&font.postscript_name)),
+                ("Encoding", PdfObject::name("Identity-H")),
+                (
+                    "DescendantFonts",
+                    PdfObject::array(vec![PdfObject::Reference(obj_ids_cid)]),
+                ),
+                ("ToUnicode", PdfObject::Reference(obj_ids_tounicode)),
+            ]);
+            self.writer.write_object(obj_ids_type0, &type0)?;
+        }
+
+        Ok(())
+    }
+
     /// Finish the document. Writes the catalog, pages tree,
     /// info dictionary, xref table, and trailer.
-    /// Consumes self — no further operations are possible.
-    pub fn end_document(
-        mut self,
-    ) -> io::Result<W> {
-        // Auto-close any open page.
+    /// Consumes self -- no further operations are possible.
+    pub fn end_document(mut self) -> io::Result<W> {
+        // Auto-close any open page
         if self.current_page.is_some() {
             self.end_page()?;
         }
 
-        // Write info dictionary if any entries exist.
+        // Write TrueType font objects (deferred until now)
+        self.write_truetype_fonts()?;
+
+        // Write info dictionary if any entries exist
         let info_id = if !self.info.is_empty() {
             let id = ObjId(self.next_obj_num, 0);
             self.next_obj_num += 1;
-            let entries: Vec<(&str, PdfObject)> =
-                self.info
-                    .iter()
-                    .map(|(k, v)| {
-                        (
-                            k.as_str(),
-                            PdfObject::literal_string(v),
-                        )
-                    })
-                    .collect();
+            let entries: Vec<(&str, PdfObject)> = self
+                .info
+                .iter()
+                .map(|(k, v)| (k.as_str(), PdfObject::literal_string(v)))
+                .collect();
             let info_obj = PdfObject::dict(entries);
             self.writer.write_object(id, &info_obj)?;
             Some(id)
@@ -310,38 +441,29 @@ impl<W: Write> PdfDocument<W> {
             None
         };
 
-        // Write pages tree (obj 2).
+        // Write pages tree (obj 2)
         let kids: Vec<PdfObject> = self
             .page_obj_ids
             .iter()
             .map(|id| PdfObject::Reference(*id))
             .collect();
-        let page_count =
-            self.page_obj_ids.len() as i64;
+        let page_count = self.page_obj_ids.len() as i64;
         let pages = PdfObject::dict(vec![
             ("Type", PdfObject::name("Pages")),
             ("Kids", PdfObject::Array(kids)),
             ("Count", PdfObject::Integer(page_count)),
         ]);
-        self.writer
-            .write_object(PAGES_OBJ, &pages)?;
+        self.writer.write_object(PAGES_OBJ, &pages)?;
 
-        // Write catalog (obj 1).
+        // Write catalog (obj 1)
         let catalog = PdfObject::dict(vec![
             ("Type", PdfObject::name("Catalog")),
-            (
-                "Pages",
-                PdfObject::Reference(PAGES_OBJ),
-            ),
+            ("Pages", PdfObject::Reference(PAGES_OBJ)),
         ]);
-        self.writer
-            .write_object(CATALOG_OBJ, &catalog)?;
+        self.writer.write_object(CATALOG_OBJ, &catalog)?;
 
-        // Write xref and trailer.
-        self.writer.write_xref_and_trailer(
-            CATALOG_OBJ,
-            info_id,
-        )?;
+        // Write xref and trailer
+        self.writer.write_xref_and_trailer(CATALOG_OBJ, info_id)?;
 
         Ok(self.writer.into_inner())
     }

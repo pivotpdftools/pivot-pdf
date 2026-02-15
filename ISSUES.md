@@ -349,3 +349,26 @@ Based on research findings in Issue 6, implmenent Font handling.
 
 ## Status
 complete
+
+---
+
+# Issue 8: Implement True Type Font Handling
+## Description
+Based on research findings in Issue 6, implement TrueType font handling. Allows users to load `.ttf` files and use them for text placement and text flows. Uses Type0/CIDFontType2 composite structure for full Unicode support. No font subsetting or compression in this phase.
+
+## Tasks
+- [x] Task 1: Add `ttf-parser` dependency to `pdf-core/Cargo.toml`
+- [x] Task 2: Add `FontRef` enum and `TrueTypeFontId` newtype to `fonts.rs`
+- [x] Task 3: Create `truetype.rs` module with `TrueTypeFont` struct
+- [x] Task 4: Refactor `TextStyle.font` from `BuiltinFont` to `FontRef`
+- [x] Task 5: Update `TextFlow` for dual-path encoding (builtin vs TrueType)
+- [x] Task 6: Update `PdfDocument` for TrueType loading and deferred writing
+- [x] Task 7: Update public exports and existing tests/examples
+- [x] Task 8: Write TrueType tests (13 tests) with DejaVu Sans fixture
+- [x] Task 9: Update PHP extension with `loadFontFile()` and `TextStyle::truetype()`
+- [x] Task 10: Create example (`generate_truetype.rs`) and documentation
+
+## Status
+complete
+
+---
