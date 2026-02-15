@@ -292,6 +292,13 @@ impl PhpPdfDocument {
         })
     }
 
+    pub fn set_compression(&mut self, enabled: bool) -> Result<(), String> {
+        with_doc!(self, set_compression, doc => {
+            doc.set_compression(enabled);
+            Ok(())
+        })
+    }
+
     pub fn begin_page(&mut self, width: f64, height: f64) -> Result<(), String> {
         with_doc!(self, begin_page, doc => {
             doc.begin_page(width, height);

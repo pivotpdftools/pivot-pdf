@@ -235,6 +235,7 @@ echo "Test 7 (Times-Roman): OK\n";
 $outFile = __DIR__ . '/php-truetype_output.pdf';
 $fontPath = __DIR__ . '/../../pdf-core/tests/fixtures/DejaVuSans.ttf';
 $doc = PdfDocument::create($outFile);
+$doc->setCompression(true);
 $doc->setInfo("Creator", "rust-pdf-php-test");
 $doc->setInfo("Title", "TrueType Font Example");
 

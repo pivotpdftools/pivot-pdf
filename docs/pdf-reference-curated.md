@@ -21,16 +21,35 @@ semantics of the components.
 #### 7.4.1 General
 Stream filters are introduced in 7.3.8, "Stream Objects." An option when reading stream data is to decode it using a filter to produce the original non-encoded data. Whether to do so and which decoding filter or filters to use may be specified in the stream dictionary.
 
+A conforming writer may encode data in a stream (for example, data for sampled images) to compress it or to convert it to a portable ASCII representation (or both). A conforming reader shall invoke the corresponding decoding filter or filters to convert the information back to its original form.
+The filter or filters for a stream shall be specified by the Filter entry in the stream’s dictionary (or the FFilter entry if the stream is external). Filters may be cascaded to form a pipeline that passes the stream through two or more decoding transformations in sequence. For example, data encoded using LZW and ASCII base-85 encoding (in that order) shall be decoded using the following entry in the stream dictionary:
+EXAMPLE 2
+`/Filter [ /ASCII85Decode /LZWDecode ]`
+Some filters may take parameters to control how they operate. These optional parameters shall be specified by the DecodeParms entry in the stream’s dictionary (or the FDecodeParms entry if the stream is external).
+
 PDF supports a standard set of filters that fall into two main categories:
 - ASCII filters enable decoding of arbitrary binary data that has been encoded as ASCII text (see 7.2, "Lexical Conventions," for an explanation of why this type of encoding might be useful).
 - Decompression filters enable decoding of data that has been compressed. The compressed data shall be in binary format, even if the original data is ASCII text.
 
 | FILTER name  | Parameters | Description                                  |
 |--------------|------------|----------------------------------------------|
+|ASCIIHexDecode|     no     | Decodes data encoded in an ASCII hexadecimal |
+|              |            | representation, reproducing the original     |
+|              |            | binary data.                                 |
+|--------------|------------|----------------------------------------------|
+|ASCII85Decode |     no     | Decodes data encoded in an ASCII base-85     |
+|              |            | representation, reproducing the original     |
+|              |            | binary data.                                 |
+|--------------|------------|----------------------------------------------|
+|LZWDecode     |     yes    | Decompresses data encoded using the LZW      |
+|              |            | (Lempel-Ziv-Welch) adaptive compression      |
+|              |            | method, reproducing the original text or     |
+|              |            | binary data.                                 |
+|--------------|------------|----------------------------------------------|
 | FlateDecode  |    yes     | (PDF 1.2) Decompresses data encoded using    |
 |              |            | the zlib/deflate compression method,         |
 |              |            | reproducing the original text or binary data |
-
+Note: there are more filters in the pdf spec, above, these are the first 4
 
 ## 9 Text
 ### 9.1 General

@@ -3,6 +3,7 @@ use pdf_core::PdfDocument;
 fn main() {
     let path = "sample_output.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
+    doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "A Test Document");
     doc.begin_page(612.0, 792.0);

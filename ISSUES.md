@@ -403,3 +403,32 @@ doc.stroke(color: "rgb 0 .5 .5");
 
 ## Status
 complete
+
+---
+
+# Issue 10: Allow compression
+## Description
+The content in the PDF files is currently written uncompressed. This can lead to very large files. Compression seems to be possible using Filters (section 7.4 of the PDF specification). We would get the most gain from compression using images but we have not implemented images yet. So, this issue deals with compressing the pdf objects that we have implemented thus far.
+
+Questions:
+1. Is the design as simple as `doc.enable_compression(true)`?
+2. Should every type of pdf object be compressed?
+3. Should multipe types of compression filters be supported? If so, what will the api look like? Maybe compression level 0 - 9 for example?
+
+### Answers
+1. Yes — `doc.set_compression(true)` is a single boolean toggle on `PdfDocument`.
+2. Only stream objects can be compressed. All 3 stream types (page content, FontFile2, ToUnicode CMap) are compressed when enabled.
+3. FlateDecode only. It's the universal standard. Compression level is left at flate2's default (level 6).
+
+## Tasks
+- [x] Task 1: Add `flate2` dependency to `pdf-core/Cargo.toml`
+- [x] Task 2: Add `compress` field, `set_compression()` method, and `make_stream()` helper to `PdfDocument`
+- [x] Task 3: Update all 3 stream creation sites to use `make_stream()`
+- [x] Task 4: Write compression tests in `pdf-core/tests/document_test.rs`
+- [x] Task 5: Update PHP extension with `setCompression()` method and stub
+- [x] Task 6: Update ISSUES.md and create documentation
+
+## Status
+complete
+
+---

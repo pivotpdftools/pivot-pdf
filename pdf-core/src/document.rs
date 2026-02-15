@@ -4,6 +4,9 @@ use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
+
 use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 use crate::graphics::Color;
 use crate::objects::{ObjId, PdfObject};
@@ -46,6 +49,8 @@ pub struct PdfDocument<W: Write> {
     truetype_font_obj_ids: BTreeMap<usize, TrueTypeFontObjIds>,
     /// Next font number for PDF resource names (F15, F16, ...).
     next_font_num: u32,
+    /// Whether to compress stream objects with FlateDecode.
+    compress: bool,
 }
 
 struct PageBuilder {
@@ -81,12 +86,22 @@ impl<W: Write> PdfDocument<W> {
             truetype_fonts: Vec::new(),
             truetype_font_obj_ids: BTreeMap::new(),
             next_font_num: 15,
+            compress: false,
         })
     }
 
     /// Set a document info entry (e.g. "Creator", "Title").
     pub fn set_info(&mut self, key: &str, value: &str) -> &mut Self {
         self.info.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    /// Enable or disable FlateDecode compression for stream objects.
+    /// When enabled, page content, embedded fonts, and ToUnicode CMaps
+    /// are compressed, typically reducing file size by 50-80%.
+    /// Disabled by default.
+    pub fn set_compression(&mut self, enabled: bool) -> &mut Self {
+        self.compress = enabled;
         self
     }
 
@@ -354,6 +369,19 @@ impl<W: Write> PdfDocument<W> {
         self
     }
 
+    /// Build a stream object, optionally compressing the data with FlateDecode.
+    fn make_stream(&self, mut dict_entries: Vec<(&str, PdfObject)>, data: Vec<u8>) -> PdfObject {
+        if self.compress {
+            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&data).expect("flate2 in-memory write");
+            let compressed = encoder.finish().expect("flate2 finish");
+            dict_entries.push(("Filter", PdfObject::name("FlateDecode")));
+            PdfObject::stream(dict_entries, compressed)
+        } else {
+            PdfObject::stream(dict_entries, data)
+        }
+    }
+
     /// Ensure a builtin font's dictionary object has been written.
     fn ensure_font_written(&mut self, font: BuiltinFont) -> io::Result<ObjId> {
         if let Some(&id) = self.font_obj_ids.get(&font) {
@@ -422,7 +450,7 @@ impl<W: Write> PdfDocument<W> {
         self.next_obj_num += 1;
 
         // Write content stream
-        let content_stream = PdfObject::stream(vec![], page.content_ops);
+        let content_stream = self.make_stream(vec![], page.content_ops);
         self.writer.write_object(content_id, &content_stream)?;
 
         // Build font resource entries for builtin fonts
@@ -491,7 +519,11 @@ impl<W: Write> PdfDocument<W> {
             let font = &self.truetype_fonts[idx];
 
             // 1. FontFile2 stream (raw .ttf data)
-            let font_file_stream = PdfObject::stream(vec![], font.font_data.clone());
+            let original_len = font.font_data.len() as i64;
+            let font_file_stream = self.make_stream(
+                vec![("Length1", PdfObject::Integer(original_len))],
+                font.font_data.clone(),
+            );
             self.writer.write_object(obj_ids_file, &font_file_stream)?;
 
             // 2. FontDescriptor (values scaled to PDF units: 1/1000)
@@ -545,7 +577,7 @@ impl<W: Write> PdfDocument<W> {
 
             // 4. ToUnicode CMap stream
             let tounicode_data = font.build_tounicode_cmap();
-            let tounicode = PdfObject::stream(vec![], tounicode_data);
+            let tounicode = self.make_stream(vec![], tounicode_data);
             self.writer.write_object(obj_ids_tounicode, &tounicode)?;
 
             // 5. Type0 font (top-level)

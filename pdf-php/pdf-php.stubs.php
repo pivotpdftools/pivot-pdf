@@ -144,6 +144,18 @@ class PdfDocument
     public function setInfo(string $key, string $value): void {}
 
     /**
+     * Enable or disable FlateDecode compression for stream objects.
+     *
+     * When enabled, page content, embedded fonts, and ToUnicode CMaps
+     * are compressed, typically reducing file size by 50-80%.
+     * Disabled by default.
+     *
+     * @param bool $enabled Whether to enable compression
+     * @throws \Exception if the document has already ended
+     */
+    public function setCompression(bool $enabled): void {}
+
+    /**
      * Begin a new page with the given dimensions in points.
      *
      * @param float $width  Page width in points

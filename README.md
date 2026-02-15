@@ -17,6 +17,8 @@ sudo apt install php-dev libclang-dev
 
 ### Build
 ```bash
+cargo build --release
+
 cargo build --release -p pdf-php
 ```
 

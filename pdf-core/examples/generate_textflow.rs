@@ -3,6 +3,7 @@ use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 fn main() {
     let path = "textflow_output.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
+    doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "TextFlow Example");
 
