@@ -366,6 +366,104 @@ assert_true(
 echo "Test 8 (TrueType) $outFile: OK\n";
 
 // ----------------------------------------------------------
+// Test 9: Image support (mirrors generate_images.rs)
+// ----------------------------------------------------------
+$outFile = __DIR__ . '/php-images_output.pdf';
+$fixturesDir = __DIR__ . '/../../pdf-core/tests/fixtures';
+$doc = PdfDocument::create($outFile);
+$doc->setCompression(true);
+$doc->setInfo("Creator", "rust-pdf-php-test");
+$doc->setInfo("Title", "Image Support Demo");
+
+// Load images
+$jpeg = $doc->loadImageFile("$fixturesDir/test.jpg");
+assert_true(is_int($jpeg), "loadImageFile JPEG returns int handle");
+assert_true($jpeg >= 0, "JPEG handle is non-negative");
+
+$png = $doc->loadImageFile("$fixturesDir/test.png");
+assert_true(is_int($png), "loadImageFile PNG returns int handle");
+
+$pngAlpha = $doc->loadImageFile("$fixturesDir/test_alpha.png");
+assert_true(is_int($pngAlpha), "loadImageFile RGBA PNG returns int handle");
+
+// Load from bytes
+$jpegBytes = file_get_contents("$fixturesDir/test.jpg");
+$jpegFromBytes = $doc->loadImageBytes($jpegBytes);
+assert_true(is_int($jpegFromBytes), "loadImageBytes returns int handle");
+
+// Page 1: All four fit modes with text
+$doc->beginPage(612.0, 792.0);
+$doc->placeText("Image Support Demo (PHP)", 72.0, 750.0);
+
+// Fit mode (JPEG)
+$doc->placeText("Fit (JPEG)", 72.0, 700.0);
+$doc->placeImage($jpeg, new Rect(72.0, 100.0, 200.0, 150.0), "fit");
+
+// Stretch mode (PNG)
+$doc->placeText("Stretch (PNG)", 320.0, 700.0);
+$doc->placeImage($png, new Rect(320.0, 100.0, 200.0, 150.0), "stretch");
+
+// Fill mode (RGBA PNG)
+$doc->placeText("Fill (PNG Alpha)", 72.0, 480.0);
+$doc->placeImage($pngAlpha, new Rect(72.0, 320.0, 200.0, 150.0), "fill");
+
+// None mode (PNG) — uses default fit param
+$doc->placeText("None (PNG)", 320.0, 480.0);
+$doc->placeImage($png, new Rect(320.0, 320.0, 200.0, 150.0), "none");
+
+$doc->endPage();
+
+// Page 2: Same JPEG on second page (XObject reused)
+$doc->beginPage(612.0, 792.0);
+$doc->placeText("Same JPEG on page 2 (XObject reused)", 72.0, 750.0);
+$doc->placeImage($jpeg, new Rect(72.0, 100.0, 468.0, 600.0), "fit");
+$doc->endPage();
+
+$doc->endDocument();
+
+$bytes = file_get_contents($outFile);
+assert_true(
+    str_starts_with($bytes, '%PDF-'),
+    "Images PDF starts with %PDF-"
+);
+assert_true(
+    str_contains($bytes, '/Subtype /Image'),
+    "Images PDF contains Image XObject"
+);
+assert_true(
+    str_contains($bytes, '/Filter /DCTDecode'),
+    "Images PDF has DCTDecode for JPEG"
+);
+assert_true(
+    str_contains($bytes, '/ColorSpace /DeviceRGB'),
+    "Images PDF has DeviceRGB color space"
+);
+assert_true(
+    str_contains($bytes, '/SMask'),
+    "Images PDF has SMask for RGBA PNG"
+);
+assert_true(
+    str_contains($bytes, '/XObject'),
+    "Images PDF has XObject in Resources"
+);
+assert_true(
+    str_contains($bytes, '/Count 2'),
+    "Images PDF has 2 pages"
+);
+
+// Invalid data returns error
+$threw = false;
+try {
+    $doc2 = PdfDocument::createInMemory();
+    $doc2->loadImageBytes("not-an-image");
+} catch (Throwable $e) {
+    $threw = true;
+}
+assert_true($threw, "Invalid image data throws");
+
+echo "Test 9 (Images) $outFile: OK\n";
+
+// ----------------------------------------------------------
 // Summary
 // ----------------------------------------------------------
 echo "\n";

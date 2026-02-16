@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 flate2 = "1"
+png = "0.17"
 ttf-parser = "0.25"

@@ -5,5 +5,5 @@
 /textflow_output.pdf
 /truetype_output.pdf
 /graphics_output.pdf
-/pdf-php/tests/php-textflow_output.pdf
-/pdf-php/tests/php-truetype_output.pdf
+/images_output.pdf
+/pdf-php/tests/*.pdf

@@ -9,6 +9,7 @@ use flate2::Compression;
 
 use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 use crate::graphics::Color;
+use crate::images::{self, ImageData, ImageFit, ImageFormat, ImageId};
 use crate::objects::{ObjId, PdfObject};
 use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
 use crate::truetype::TrueTypeFont;
@@ -17,6 +18,13 @@ use crate::writer::PdfWriter;
 const CATALOG_OBJ: ObjId = ObjId(1, 0);
 const PAGES_OBJ: ObjId = ObjId(2, 0);
 const FIRST_PAGE_OBJ_NUM: u32 = 3;
+
+/// Pre-allocated object IDs for an image XObject.
+struct ImageObjIds {
+    xobject: ObjId,
+    smask: Option<ObjId>,
+    pdf_name: String,
+}
 
 /// Pre-allocated object IDs for a TrueType font's PDF objects.
 struct TrueTypeFontObjIds {
@@ -51,6 +59,14 @@ pub struct PdfDocument<W: Write> {
     next_font_num: u32,
     /// Whether to compress stream objects with FlateDecode.
     compress: bool,
+    /// Loaded images.
+    images: Vec<ImageData>,
+    /// Pre-allocated ObjIds for images (by index).
+    image_obj_ids: BTreeMap<usize, ImageObjIds>,
+    /// Images whose XObjects have already been written.
+    written_images: BTreeSet<usize>,
+    /// Next image number for PDF resource names (Im1, Im2, ...).
+    next_image_num: u32,
 }
 
 struct PageBuilder {
@@ -59,6 +75,7 @@ struct PageBuilder {
     content_ops: Vec<u8>,
     used_fonts: BTreeSet<BuiltinFont>,
     used_truetype_fonts: BTreeSet<usize>,
+    used_images: BTreeSet<usize>,
 }
 
 impl PdfDocument<BufWriter<File>> {
@@ -87,6 +104,10 @@ impl<W: Write> PdfDocument<W> {
             truetype_font_obj_ids: BTreeMap::new(),
             next_font_num: 15,
             compress: false,
+            images: Vec::new(),
+            image_obj_ids: BTreeMap::new(),
+            written_images: BTreeSet::new(),
+            next_image_num: 1,
         })
     }
 
@@ -136,6 +157,7 @@ impl<W: Write> PdfDocument<W> {
             content_ops: Vec::new(),
             used_fonts: BTreeSet::new(),
             used_truetype_fonts: BTreeSet::new(),
+            used_images: BTreeSet::new(),
         });
         self
     }
@@ -221,6 +243,176 @@ impl<W: Write> PdfDocument<W> {
         page.used_fonts.extend(used_fonts.builtin);
         page.used_truetype_fonts.extend(used_fonts.truetype);
         Ok(result)
+    }
+
+    // -------------------------------------------------------
+    // Image operations
+    // -------------------------------------------------------
+
+    /// Load an image from a file path.
+    /// Returns an ImageId that can be used with `place_image`.
+    pub fn load_image_file<P: AsRef<Path>>(&mut self, path: P) -> Result<ImageId, String> {
+        let data = std::fs::read(path.as_ref())
+            .map_err(|e| format!("Failed to read image file: {}", e))?;
+        self.load_image_bytes(data)
+    }
+
+    /// Load an image from raw bytes (JPEG or PNG).
+    /// Returns an ImageId that can be used with `place_image`.
+    pub fn load_image_bytes(&mut self, data: Vec<u8>) -> Result<ImageId, String> {
+        let image_data = images::load_image(data)?;
+        let idx = self.images.len();
+        self.images.push(image_data);
+        Ok(ImageId(idx))
+    }
+
+    /// Place an image on the current page within the given bounding rect.
+    pub fn place_image(
+        &mut self,
+        image: &ImageId,
+        rect: &Rect,
+        fit: ImageFit,
+    ) -> &mut Self {
+        let idx = image.0;
+        let img = &self.images[idx];
+        let page_height = self
+            .current_page
+            .as_ref()
+            .expect("place_image called with no open page")
+            .height;
+
+        let placement =
+            images::calculate_placement(img.width, img.height, rect, fit, page_height);
+
+        self.ensure_image_obj_ids(idx);
+        let pdf_name = self.image_obj_ids[&idx].pdf_name.clone();
+
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("place_image called with no open page");
+        page.used_images.insert(idx);
+
+        // Build content stream operators
+        let mut ops = String::new();
+        ops.push_str("q\n");
+
+        // Clipping (for Fill mode)
+        if let Some(clip) = &placement.clip {
+            ops.push_str(&format!(
+                "{} {} {} {} re W n\n",
+                format_coord(clip.x),
+                format_coord(clip.y),
+                format_coord(clip.width),
+                format_coord(clip.height),
+            ));
+        }
+
+        // Transformation matrix: scale and position
+        // cm matrix: [width 0 0 height x y]
+        ops.push_str(&format!(
+            "{} 0 0 {} {} {} cm\n",
+            format_coord(placement.width),
+            format_coord(placement.height),
+            format_coord(placement.x),
+            format_coord(placement.y),
+        ));
+
+        // Paint the image
+        ops.push_str(&format!("/{} Do\n", pdf_name));
+        ops.push_str("Q\n");
+
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Pre-allocate ObjIds for an image if not yet done.
+    fn ensure_image_obj_ids(&mut self, idx: usize) {
+        if self.image_obj_ids.contains_key(&idx) {
+            return;
+        }
+        let xobject = ObjId(self.next_obj_num, 0);
+        self.next_obj_num += 1;
+
+        let smask = if self.images[idx].smask_data.is_some() {
+            let id = ObjId(self.next_obj_num, 0);
+            self.next_obj_num += 1;
+            Some(id)
+        } else {
+            None
+        };
+
+        let pdf_name = format!("Im{}", self.next_image_num);
+        self.next_image_num += 1;
+
+        self.image_obj_ids.insert(idx, ImageObjIds {
+            xobject,
+            smask,
+            pdf_name,
+        });
+    }
+
+    /// Write the image XObject stream(s) for the given image index.
+    fn write_image_xobject(&mut self, idx: usize) -> io::Result<()> {
+        if self.written_images.contains(&idx) {
+            return Ok(());
+        }
+
+        let img = &self.images[idx];
+        let obj_ids = &self.image_obj_ids[&idx];
+        let xobject_id = obj_ids.xobject;
+        let smask_id = obj_ids.smask;
+
+        // Write SMask XObject first if alpha data exists
+        if let (Some(smask_obj_id), Some(smask_data)) =
+            (smask_id, img.smask_data.as_ref())
+        {
+            let smask_stream = self.make_stream(
+                vec![
+                    ("Type", PdfObject::name("XObject")),
+                    ("Subtype", PdfObject::name("Image")),
+                    ("Width", PdfObject::Integer(img.width as i64)),
+                    ("Height", PdfObject::Integer(img.height as i64)),
+                    ("ColorSpace", PdfObject::name("DeviceGray")),
+                    ("BitsPerComponent", PdfObject::Integer(8)),
+                ],
+                smask_data.clone(),
+            );
+            self.writer.write_object(smask_obj_id, &smask_stream)?;
+        }
+
+        // Build image XObject dict entries
+        let mut entries: Vec<(&str, PdfObject)> = vec![
+            ("Type", PdfObject::name("XObject")),
+            ("Subtype", PdfObject::name("Image")),
+            ("Width", PdfObject::Integer(img.width as i64)),
+            ("Height", PdfObject::Integer(img.height as i64)),
+            ("ColorSpace", PdfObject::name(img.color_space.pdf_name())),
+            (
+                "BitsPerComponent",
+                PdfObject::Integer(img.bits_per_component as i64),
+            ),
+        ];
+
+        if let Some(smask_obj_id) = smask_id {
+            entries.push(("SMask", PdfObject::Reference(smask_obj_id)));
+        }
+
+        // For JPEG: embed raw data with DCTDecode, never double-compress
+        // For PNG (decoded pixels): use make_stream for optional FlateDecode
+        let image_obj = match img.format {
+            ImageFormat::Jpeg => {
+                entries.push(("Filter", PdfObject::name("DCTDecode")));
+                PdfObject::stream(entries, img.data.clone())
+            }
+            ImageFormat::Png => {
+                self.make_stream(entries, img.data.clone())
+            }
+        };
+
+        self.writer.write_object(xobject_id, &image_obj)?;
+        self.written_images.insert(idx);
+        Ok(())
     }
 
     // -------------------------------------------------------
@@ -444,6 +636,12 @@ impl<W: Write> PdfDocument<W> {
             self.ensure_tt_font_obj_ids(idx);
         }
 
+        // Write image XObjects for images used on this page
+        let used_images: Vec<usize> = page.used_images.iter().copied().collect();
+        for idx in &used_images {
+            self.write_image_xobject(*idx)?;
+        }
+
         let content_id = ObjId(self.next_obj_num, 0);
         self.next_obj_num += 1;
         let page_id = ObjId(self.next_obj_num, 0);
@@ -482,6 +680,26 @@ impl<W: Write> PdfDocument<W> {
 
         let font_dict = PdfObject::Dictionary(all_font_entries);
 
+        // Build XObject dict for images used on this page
+        let xobject_entries: Vec<(String, PdfObject)> = used_images
+            .iter()
+            .filter_map(|idx| {
+                self.image_obj_ids.get(idx).map(|ids| {
+                    (ids.pdf_name.clone(), PdfObject::Reference(ids.xobject))
+                })
+            })
+            .collect();
+
+        // Build Resources dict with Font and optional XObject
+        let mut resource_entries: Vec<(String, PdfObject)> =
+            vec![("Font".to_string(), font_dict)];
+        if !xobject_entries.is_empty() {
+            resource_entries.push((
+                "XObject".to_string(),
+                PdfObject::Dictionary(xobject_entries),
+            ));
+        }
+
         // Write page dictionary
         let page_dict = PdfObject::dict(vec![
             ("Type", PdfObject::name("Page")),
@@ -496,7 +714,7 @@ impl<W: Write> PdfDocument<W> {
                 ]),
             ),
             ("Contents", PdfObject::Reference(content_id)),
-            ("Resources", PdfObject::dict(vec![("Font", font_dict)])),
+            ("Resources", PdfObject::Dictionary(resource_entries)),
         ]);
         self.writer.write_object(page_id, &page_dict)?;
 

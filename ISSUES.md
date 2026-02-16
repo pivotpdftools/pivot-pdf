@@ -389,7 +389,7 @@ doc.lineto(x, y = y + 10);
 doc.lineto(x = x + 10, y);
 doc.lineto(x, y = y - 10);
 doc.stroke(color: "rgb 0 .5 .5");
-``
+```
 
 ## Tasks
 - [x] Task 1: Update ISSUES.md with task breakdown and status
@@ -427,6 +427,49 @@ Questions:
 - [x] Task 4: Write compression tests in `pdf-core/tests/document_test.rs`
 - [x] Task 5: Update PHP extension with `setCompression()` method and stub
 - [x] Task 6: Update ISSUES.md and create documentation
+
+## Status
+complete
+
+---
+
+# Issue 11: Images
+## Description
+Add support for images.
+
+API Ideas:
+```ts
+let doc = PdfDocument.create("outfile.pdf")
+doc.begin_page(612.0, 792.0);
+
+let image = new Image("path/to/image");
+// and/or
+let image = new Image(bytes);
+
+//  with optionalFitOptions having properties something like fit: clip | shrink | scale
+let result = doc.place_image(image, rect, optionalFitOptions); 
+match result {
+    FitResult::Stop => break,
+    FitResult::BoxFull => continue,
+    FitResult::BoxEmpty => {
+        eprintln!("Warning: bounding box too small",);
+        break;
+    }
+}
+```
+
+## Tasks
+- [x] Task 1: Add `png` dependency to `pdf-core/Cargo.toml`
+- [x] Task 2: Create `pdf-core/src/images.rs` (types, JPEG parser, PNG parser, format detection, placement calculator)
+- [x] Task 3: Add test fixture images (test.jpg, test.png, test_alpha.png)
+- [x] Task 4: Integrate images into `PdfDocument` (load/place/write methods, resource tracking)
+- [x] Task 5: Update `end_page()` for image resources (XObject dict in page Resources)
+- [x] Task 6: Update public exports in `pdf-core/src/lib.rs`
+- [x] Task 7: Write tests in `pdf-core/tests/images_test.rs` (19 tests)
+- [x] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) and stubs (`pdf-php/pdf-php.stubs.php`)
+- [x] Task 9: Create example (`pdf-core/examples/generate_images.rs`)
+- [x] Task 10: Create documentation (`docs/features/images.md`)
+- [x] Task 11: Update ISSUES.md with tasks and status
 
 ## Status
 complete

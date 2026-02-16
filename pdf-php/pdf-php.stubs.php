@@ -295,6 +295,46 @@ class PdfDocument
      */
     public function restoreState(): void {}
 
+    // -------------------------------------------------------
+    // Image operations
+    // -------------------------------------------------------
+
+    /**
+     * Load an image from a file path (JPEG or PNG).
+     *
+     * Returns an integer image handle for use with placeImage().
+     *
+     * @param string $path Path to the image file
+     * @return int Image handle
+     * @throws \Exception if the file cannot be read or parsed
+     */
+    public function loadImageFile(string $path): int {}
+
+    /**
+     * Load an image from raw bytes (JPEG or PNG).
+     *
+     * Returns an integer image handle for use with placeImage().
+     *
+     * @param string $data Raw image bytes
+     * @return int Image handle
+     * @throws \Exception if the data cannot be parsed
+     */
+    public function loadImageBytes(string $data): int {}
+
+    /**
+     * Place an image on the current page within a bounding rectangle.
+     *
+     * @param int    $handle Image handle from loadImageFile/loadImageBytes
+     * @param Rect   $rect   Bounding rectangle for the image
+     * @param string $fit    Fit mode: "fit" (default), "fill", "stretch", "none"
+     * @throws \Exception if the document has already ended
+     */
+    public function placeImage(
+        int $handle,
+        Rect $rect,
+        string $fit = 'fit'
+    ): void {}
+
     /**
      * End the current page.
      *

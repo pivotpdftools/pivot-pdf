@@ -2,10 +2,11 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 
 use ext_php_rs::prelude::*;
-use ext_php_rs::types::Zval;
+use ext_php_rs::types::{ZendStr, Zval};
 
 use pdf_core::{
-    BuiltinFont, Color, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle, TrueTypeFontId,
+    BuiltinFont, Color, FitResult, FontRef, ImageFit, ImageId, PdfDocument, Rect, TextFlow,
+    TextStyle, TrueTypeFontId,
 };
 
 // ----------------------------------------------------------
@@ -346,6 +347,50 @@ impl PhpPdfDocument {
     }
 
     // -------------------------------------------------------
+    // Image operations
+    // -------------------------------------------------------
+
+    /// Load an image from a file path. Returns an integer handle.
+    pub fn load_image_file(&mut self, path: &str) -> Result<i64, String> {
+        with_doc!(self, load_image_file, doc => {
+            let id = doc.load_image_file(path)
+                .map_err(|e| format!("load_image_file failed: {}", e))?;
+            Ok(id.0 as i64)
+        })
+    }
+
+    /// Load an image from raw bytes. Returns an integer handle.
+    pub fn load_image_bytes(&mut self, data: &mut Zval) -> Result<i64, String> {
+        let bytes = data
+            .binary()
+            .ok_or_else(|| "Expected binary string".to_string())?
+            .to_vec();
+
+        with_doc!(self, load_image_bytes, doc => {
+            let id = doc.load_image_bytes(bytes)
+                .map_err(|e| format!("load_image_bytes failed: {}", e))?;
+            Ok(id.0 as i64)
+        })
+    }
+
+    /// Place an image on the current page.
+    /// fit: "fit" (default), "fill", "stretch", "none"
+    pub fn place_image(
+        &mut self,
+        handle: i64,
+        rect: &PhpRect,
+        fit: Option<String>,
+    ) -> Result<(), String> {
+        let image_fit = parse_image_fit(&fit.unwrap_or_else(|| "fit".to_string()))?;
+        let core_rect = rect.to_core();
+        let image_id = ImageId(handle as usize);
+        with_doc!(self, place_image, doc => {
+            doc.place_image(&image_id, &core_rect, image_fit);
+            Ok(())
+        })
+    }
+
+    // -------------------------------------------------------
     // Graphics operations
     // -------------------------------------------------------
 
@@ -469,6 +514,19 @@ impl PhpPdfDocument {
                 Ok(zval)
             }
         }
+    }
+}
+
+fn parse_image_fit(s: &str) -> Result<ImageFit, String> {
+    match s {
+        "fit" => Ok(ImageFit::Fit),
+        "fill" => Ok(ImageFit::Fill),
+        "stretch" => Ok(ImageFit::Stretch),
+        "none" => Ok(ImageFit::None),
+        _ => Err(format!(
+            "Invalid fit mode: '{}'. Valid: fit, fill, stretch, none",
+            s
+        )),
     }
 }
 
