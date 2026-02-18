@@ -11,6 +11,7 @@ use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 use crate::graphics::Color;
 use crate::images::{self, ImageData, ImageFit, ImageFormat, ImageId};
 use crate::objects::{ObjId, PdfObject};
+use crate::tables::{Row, Table, TableCursor};
 use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
 use crate::truetype::TrueTypeFont;
 use crate::writer::PdfWriter;
@@ -239,6 +240,34 @@ impl<W: Write> PdfDocument<W> {
             .current_page
             .as_mut()
             .expect("fit_textflow called with no open page");
+        page.content_ops.extend_from_slice(&ops);
+        page.used_fonts.extend(used_fonts.builtin);
+        page.used_truetype_fonts.extend(used_fonts.truetype);
+        Ok(result)
+    }
+
+    /// Place a single table row on the current page.
+    ///
+    /// `cursor` tracks the current Y position within the page. Pass the same
+    /// cursor to successive calls; call `cursor.reset()` when starting a new page.
+    ///
+    /// Returns:
+    /// - `Stop`     — row placed; advance to the next row.
+    /// - `BoxFull`  — page full; end the page, begin a new one, reset the cursor, retry.
+    /// - `BoxEmpty` — rect too small for this row even from the top; skip or abort.
+    pub fn fit_row(
+        &mut self,
+        table: &Table,
+        row: &Row,
+        cursor: &mut TableCursor,
+    ) -> io::Result<FitResult> {
+        let (ops, result, used_fonts) =
+            table.generate_row_ops(row, cursor, &mut self.truetype_fonts);
+
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("fit_row called with no open page");
         page.content_ops.extend_from_slice(&ops);
         page.used_fonts.extend(used_fonts.builtin);
         page.used_truetype_fonts.extend(used_fonts.truetype);

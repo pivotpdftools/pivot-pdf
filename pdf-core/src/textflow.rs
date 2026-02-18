@@ -309,7 +309,7 @@ impl TextFlow {
 }
 
 /// Compute line height based on font type.
-fn line_height_for(style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> f64 {
+pub(crate) fn line_height_for(style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> f64 {
     match style.font {
         FontRef::Builtin(b) => FontMetrics::line_height(b, style.font_size),
         FontRef::TrueType(id) => tt_fonts[id.0].line_height(style.font_size),
@@ -317,7 +317,7 @@ fn line_height_for(style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> f64 {
 }
 
 /// Measure a word's width based on font type.
-fn measure_word(text: &str, style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> f64 {
+pub(crate) fn measure_word(text: &str, style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> f64 {
     match style.font {
         FontRef::Builtin(b) => FontMetrics::measure_text(text, b, style.font_size),
         FontRef::TrueType(id) => tt_fonts[id.0].measure_text(text, style.font_size),

@@ -2,11 +2,11 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 
 use ext_php_rs::prelude::*;
-use ext_php_rs::types::{ZendStr, Zval};
+use ext_php_rs::types::{Zval};
 
 use pdf_core::{
-    BuiltinFont, Color, FitResult, FontRef, ImageFit, ImageId, PdfDocument, Rect, TextFlow,
-    TextStyle, TrueTypeFontId,
+    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, ImageFit, ImageId,
+    PdfDocument, Rect, Row, Table, TableCursor, TextFlow, TextStyle, TrueTypeFontId,
 };
 
 // ----------------------------------------------------------
@@ -208,6 +208,278 @@ impl PhpTextFlow {
 }
 
 // ----------------------------------------------------------
+// CellStyle
+// ----------------------------------------------------------
+
+/// PHP class: CellStyle
+///
+/// ```php
+/// $header = new CellStyle();
+/// $header->fontSize = 12.0;
+/// $header->backgroundColor = new Color(0.2, 0.3, 0.5);
+/// $header->textColor = new Color(1.0, 1.0, 1.0);
+/// $header->overflow = 'wrap'; // 'wrap', 'clip', or 'shrink'
+/// ```
+#[php_class(name = "CellStyle")]
+pub struct PhpCellStyle {
+    #[prop]
+    pub font_name: String,
+    #[prop]
+    pub font_handle: i64,
+    #[prop]
+    pub font_size: f64,
+    #[prop]
+    pub padding: f64,
+    /// Overflow mode: "wrap", "clip", or "shrink"
+    #[prop]
+    pub overflow: String,
+    /// Background color (null = none)
+    pub background_color: Option<Color>,
+    /// Text color (null = default black)
+    pub text_color: Option<Color>,
+}
+
+#[php_impl]
+impl PhpCellStyle {
+    pub fn __construct() -> Self {
+        PhpCellStyle {
+            font_name: "Helvetica".to_string(),
+            font_handle: -1,
+            font_size: 10.0,
+            padding: 4.0,
+            overflow: "wrap".to_string(),
+            background_color: None,
+            text_color: None,
+        }
+    }
+
+    /// Set background color (pass null to clear).
+    pub fn set_background_color(&mut self, color: Option<&PhpColor>) {
+        self.background_color = color.map(|c| c.to_core());
+    }
+
+    /// Set text color (pass null to use default black).
+    pub fn set_text_color(&mut self, color: Option<&PhpColor>) {
+        self.text_color = color.map(|c| c.to_core());
+    }
+}
+
+impl PhpCellStyle {
+    fn to_core(&self) -> Result<CellStyle, String> {
+        let font = if self.font_handle >= 0 {
+            FontRef::TrueType(TrueTypeFontId(self.font_handle as usize))
+        } else {
+            let builtin = BuiltinFont::from_name(&self.font_name).ok_or_else(|| {
+                format!("Unknown font: '{}'", self.font_name)
+            })?;
+            FontRef::Builtin(builtin)
+        };
+
+        let overflow = match self.overflow.as_str() {
+            "clip" => CellOverflow::Clip,
+            "shrink" => CellOverflow::Shrink,
+            _ => CellOverflow::Wrap,
+        };
+
+        Ok(CellStyle {
+            background_color: self.background_color,
+            text_color: self.text_color,
+            font,
+            font_size: self.font_size,
+            padding: self.padding,
+            overflow,
+        })
+    }
+}
+
+// ----------------------------------------------------------
+// Cell
+// ----------------------------------------------------------
+
+/// PHP class: Cell
+///
+/// ```php
+/// $cell = new Cell("Hello");
+/// $cell = Cell::styled("Bold", $style);
+/// ```
+#[php_class(name = "Cell")]
+pub struct PhpCell {
+    text: String,
+    style: Option<CellStyle>,
+}
+
+#[php_impl]
+impl PhpCell {
+    pub fn __construct(text: &str) -> Self {
+        PhpCell {
+            text: text.to_string(),
+            style: None,
+        }
+    }
+
+    /// Create a cell with an explicit style.
+    pub fn styled(text: &str, style: &PhpCellStyle) -> Result<Self, String> {
+        Ok(PhpCell {
+            text: text.to_string(),
+            style: Some(style.to_core()?),
+        })
+    }
+}
+
+impl PhpCell {
+    fn to_core(self) -> Cell {
+        match self.style {
+            Some(s) => Cell::styled(self.text, s),
+            None => Cell::new(self.text),
+        }
+    }
+}
+
+// ----------------------------------------------------------
+// Row
+// ----------------------------------------------------------
+
+/// PHP class: Row
+///
+/// ```php
+/// $row = new Row([$cell1, $cell2]);
+/// $row->setBackgroundColor(new Color(0.9, 0.9, 0.9));
+/// $row->height = 20.0; // optional fixed height
+/// ```
+#[php_class(name = "Row")]
+pub struct PhpRow {
+    cells: Vec<Cell>,
+    background_color: Option<Color>,
+    #[prop]
+    pub height: Option<f64>,
+}
+
+#[php_impl]
+impl PhpRow {
+    pub fn __construct(cells: Vec<&PhpCell>) -> Self {
+        let core_cells = cells.into_iter().map(|c| {
+            let cell = PhpCell {
+                text: c.text.clone(),
+                style: c.style.clone(),
+            };
+            cell.to_core()
+        }).collect();
+
+        PhpRow {
+            cells: core_cells,
+            background_color: None,
+            height: None,
+        }
+    }
+
+    /// Set the row background color.
+    pub fn set_background_color(&mut self, color: Option<&PhpColor>) {
+        self.background_color = color.map(|c| c.to_core());
+    }
+}
+
+impl PhpRow {
+    fn to_core(&self) -> Row {
+        let mut row = Row::new(self.cells.clone());
+        row.background_color = self.background_color;
+        row.height = self.height;
+        row
+    }
+}
+
+// ----------------------------------------------------------
+// Table
+// ----------------------------------------------------------
+
+/// PHP class: Table
+///
+/// Config-only: stores column widths, border settings, and default style.
+/// Pass rows individually to `PdfDocument::fitRow()`.
+///
+/// ```php
+/// $table = new Table([200.0, 200.0, 68.0]);
+/// $table->setBorderWidth(0.5);
+/// $table->setBorderColor(new Color(0, 0, 0));
+///
+/// $cursor = new TableCursor(new Rect(72, 720, 468, 648));
+/// foreach ($dbRows as $row) {
+///     while (true) {
+///         $r = $doc->fitRow($table, $row, $cursor);
+///         if ($r === 'stop') break;
+///         if ($r === 'box_full') {
+///             $doc->endPage();
+///             $doc->beginPage(612, 792);
+///             $cursor->reset(new Rect(72, 720, 468, 648));
+///         } else { break; } // box_empty
+///     }
+/// }
+/// ```
+#[php_class(name = "Table")]
+pub struct PhpTable {
+    inner: Table,
+}
+
+#[php_impl]
+impl PhpTable {
+    pub fn __construct(columns: Vec<f64>) -> Self {
+        PhpTable {
+            inner: Table::new(columns),
+        }
+    }
+
+    pub fn set_border_color(&mut self, color: &PhpColor) {
+        self.inner.border_color = color.to_core();
+    }
+
+    pub fn set_border_width(&mut self, width: f64) {
+        self.inner.border_width = width;
+    }
+
+    pub fn set_default_style(&mut self, style: &PhpCellStyle) -> Result<(), String> {
+        self.inner.default_style = style.to_core()?;
+        Ok(())
+    }
+}
+
+// ----------------------------------------------------------
+// TableCursor
+// ----------------------------------------------------------
+
+/// PHP class: TableCursor
+///
+/// Tracks the current Y position while placing rows on a page.
+/// Create one cursor per page rect; call `reset()` when starting a new page.
+/// Use `isFirstRow()` to detect the top of a page and insert a header row.
+///
+/// ```php
+/// $cursor = new TableCursor(new Rect(72, 720, 468, 648));
+/// if ($cursor->isFirstRow()) {
+///     $doc->fitRow($table, $headerRow, $cursor);
+/// }
+/// ```
+#[php_class(name = "TableCursor")]
+pub struct PhpTableCursor {
+    inner: TableCursor,
+}
+
+#[php_impl]
+impl PhpTableCursor {
+    pub fn __construct(rect: &PhpRect) -> Self {
+        PhpTableCursor {
+            inner: TableCursor::new(&rect.to_core()),
+        }
+    }
+
+    pub fn reset(&mut self, rect: &PhpRect) {
+        self.inner.reset(&rect.to_core());
+    }
+
+    pub fn is_first_row(&self) -> bool {
+        self.inner.is_first_row()
+    }
+}
+
+// ----------------------------------------------------------
 // PdfDocument
 // ----------------------------------------------------------
 
@@ -342,6 +614,29 @@ impl PhpPdfDocument {
                 FitResult::BoxEmpty => {
                     "box_empty".to_string()
                 }
+            })
+        })
+    }
+
+    /// Place a single row into the table layout on the current page.
+    ///
+    /// Returns "stop" (placed), "box_full" (page full, turn page and retry),
+    /// or "box_empty" (rect too small for this row).
+    pub fn fit_row(
+        &mut self,
+        table: &PhpTable,
+        row: &PhpRow,
+        cursor: &mut PhpTableCursor,
+    ) -> Result<String, String> {
+        let core_row = row.to_core();
+        with_doc!(self, fit_row, doc => {
+            let result = doc
+                .fit_row(&table.inner, &core_row, &mut cursor.inner)
+                .map_err(|e| format!("fit_row failed: {}", e))?;
+            Ok(match result {
+                FitResult::Stop => "stop".to_string(),
+                FitResult::BoxFull => "box_full".to_string(),
+                FitResult::BoxEmpty => "box_empty".to_string(),
             })
         })
     }

@@ -105,6 +105,139 @@ class TextFlow
     public function isFinished(): bool {}
 }
 
+class CellStyle
+{
+    public string $font_name;
+    public int $font_handle;
+    public float $font_size;
+    public float $padding;
+    /** Overflow mode: "wrap", "clip", or "shrink" */
+    public string $overflow;
+
+    /**
+     * Create a CellStyle with default values.
+     *
+     * Defaults: font = "Helvetica", font_size = 10.0, padding = 4.0, overflow = "wrap".
+     */
+    public function __construct() {}
+
+    /**
+     * Set the background color. Pass null to clear.
+     *
+     * @param Color|null $color Background color, or null for transparent
+     */
+    public function setBackgroundColor(?Color $color): void {}
+
+    /**
+     * Set the text color. Pass null to use the PDF default (black).
+     *
+     * @param Color|null $color Text color, or null for default
+     */
+    public function setTextColor(?Color $color): void {}
+}
+
+class Cell
+{
+    /**
+     * Create a cell with default style.
+     *
+     * @param string $text Cell content
+     */
+    public function __construct(string $text) {}
+
+    /**
+     * Create a cell with an explicit style.
+     *
+     * @param string    $text  Cell content
+     * @param CellStyle $style Cell style
+     * @throws \Exception if the style contains an invalid font name
+     */
+    public static function styled(string $text, CellStyle $style): self {}
+}
+
+class Row
+{
+    /** Optional fixed height in points. Required for "clip" and "shrink" overflow. */
+    public ?float $height;
+
+    /**
+     * Create a row with the given cells.
+     *
+     * @param Cell[] $cells Array of Cell objects
+     */
+    public function __construct(array $cells) {}
+
+    /**
+     * Set the row background color. Per-cell background takes priority.
+     *
+     * @param Color|null $color Row background color, or null for transparent
+     */
+    public function setBackgroundColor(?Color $color): void {}
+}
+
+class Table
+{
+    /**
+     * Create a table with the given column widths.
+     *
+     * Table is config-only. Pass rows to PdfDocument::fitRow().
+     *
+     * @param float[] $columns Column widths in points
+     */
+    public function __construct(array $columns) {}
+
+    /**
+     * Set the border stroke color.
+     *
+     * @param Color $color Border color
+     */
+    public function setBorderColor(Color $color): void {}
+
+    /**
+     * Set the border line width. Set to 0.0 to disable borders.
+     *
+     * @param float $width Border width in points
+     */
+    public function setBorderWidth(float $width): void {}
+
+    /**
+     * Set the default style used as a fallback for cells without explicit styles.
+     *
+     * @param CellStyle $style Default cell style
+     * @throws \Exception if the style contains an invalid font name
+     */
+    public function setDefaultStyle(CellStyle $style): void {}
+}
+
+class TableCursor
+{
+    /**
+     * Create a cursor for placing rows within a bounding rectangle.
+     *
+     * Call reset() when starting a new page. Use isFirstRow() to detect
+     * the top of a page and insert a repeated header row.
+     *
+     * @param Rect $rect The bounding rectangle for table rows on this page
+     */
+    public function __construct(Rect $rect) {}
+
+    /**
+     * Reset the cursor to the top of a new bounding rectangle.
+     *
+     * Call this after starting a new page.
+     *
+     * @param Rect $rect The bounding rectangle on the new page
+     */
+    public function reset(Rect $rect): void {}
+
+    /**
+     * Returns true if no rows have been placed yet on the current page.
+     *
+     * Use this to insert a repeated header row at the top of each page.
+     */
+    public function isFirstRow(): bool {}
+}
+
 class PdfDocument
 {
     /**
@@ -190,6 +323,22 @@ class PdfDocument
         TextFlow $flow,
         Rect $rect
     ): string {}
+
+    /**
+     * Place a single row on the current page using the streaming fit-row pattern.
+     *
+     * Returns "stop" when the row was placed successfully (advance to next row).
+     * Returns "box_full" when the page is full (end page, begin new page, reset
+     * cursor, then retry the same row). Returns "box_empty" when the rect is
+     * intrinsically too small for the row.
+     *
+     * @param Table       $table  Table config (column widths, border, default style)
+     * @param Row         $row    The row to place
+     * @param TableCursor $cursor Page-level cursor tracking current Y position
+     * @return string "stop", "box_full", or "box_empty"
+     * @throws \Exception on error or if the document has already ended
+     */
+    public function fitRow(Table $table, Row $row, TableCursor $cursor): string {}
 
     // -------------------------------------------------------
     // Graphics operations

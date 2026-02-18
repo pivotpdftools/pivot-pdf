@@ -6,4 +6,5 @@
 /truetype_output.pdf
 /graphics_output.pdf
 /images_output.pdf
+/tables_report.pdf
 /pdf-php/tests/*.pdf

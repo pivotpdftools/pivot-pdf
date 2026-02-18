@@ -475,3 +475,35 @@ match result {
 complete
 
 ---
+
+# Issue 12: Tables
+## Description
+Users need to be able to render tables to a pdf.
+- A table contains rows
+- Rows contain cells
+- Tables and their rows should use a fit flow algorithm similar to fit_textflow (perhaps fit_table)
+- Row and cell options which allow background color, font color, and font should be handled
+- Cell options should provide a way to specify how to handle overflowing text
+
+Create an example which simulates iterating over a database result (but use a for loop) to show how large datasets can be efficiently placed into a pdf.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Make `line_height_for` and `measure_word` `pub(crate)` in `textflow.rs`
+- [x] Task 3: Create `pdf-core/src/tables.rs` with data structures and `generate_row_ops`
+- [x] Task 4: Add `fit_row()` to `document.rs` (streaming, one row at a time)
+- [x] Task 5: Update public exports in `pdf-core/src/lib.rs` (includes `TableCursor`)
+- [x] Task 6: Write tests in `pdf-core/tests/tables_test.rs` (23 tests)
+- [x] Task 7: Create example `pdf-core/examples/generate_tables.rs` (streaming loop with header repeat)
+- [x] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) and stubs (`pdf-php/pdf-php.stubs.php`)
+- [x] Task 9: Create documentation `docs/features/tables.md`
+
+## Design Note
+Initial design used `fit_table` with rows stored inside `Table`. Replaced with `fit_row` +
+`TableCursor` so datasets can be streamed row-by-row from database cursors without buffering
+all rows in memory. `cursor.is_first_row()` enables automatic header repetition on each page.
+
+## Status
+complete
+
+---
