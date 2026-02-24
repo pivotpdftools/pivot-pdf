@@ -586,3 +586,18 @@ Each php example should mimic the core rust examples and produce the same conten
 
 ## Status
 complete
+
+---
+
+# Issue 16: Make README.md ready for consumption
+## Description
+The current `README.md` contains a few commands for reference. We are getting ready to publish this repository to github and need the README to be well written for developer consumption. It should include things like overview, requirements, and how to run the tests and examples. It should also contain a simple summary of features implemented thus far (a full roadmap will be created at a later date). It may include other ubiquitious README content.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Write README.md with overview, features, requirements, and instructions
+
+## Status
+complete
+
+---

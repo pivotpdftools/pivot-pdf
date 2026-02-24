@@ -1,28 +1,131 @@
+# Pivot PDF
 
-## Run the examples
+A PDF creation library written in Rust, designed to be used from any language. The core is implemented in Rust and can be used directly in Rust projects. Language bindings are being built for PHP, Java, C#, Python, Go, and other major languages.
+
+Designed for low memory and CPU consumption — even for documents with hundreds of pages — making it well suited for SaaS and web applications that generate reports, contracts, invoices, or bills of material on the fly.
+
+## Features
+
+- **Text placement** — place text at arbitrary (x, y) positions using any supported font
+- **TextFlow** — automatic word wrap and multi-page text reflow with mixed font styles
+- **14 built-in fonts** — all standard PDF fonts (Helvetica, Times, Courier, Symbol, ZapfDingbats) with no embedding required
+- **TrueType font embedding** — load `.ttf` files for full Unicode text with automatic metrics extraction
+- **Line graphics** — move/lineto paths, rectangles, stroke, fill, fill-stroke, color and line-width control
+- **Images** — place JPEG and PNG images (with alpha) using fit, fill, stretch, or none fit modes
+- **Tables** — streaming row-by-row table layout with per-cell styles, overflow modes, borders, and background colors
+- **Page editing** — open completed pages for overlay content (e.g. "Page X of Y" numbering)
+- **Compression** — optional FlateDecode compression for all stream objects (typically 50–80% size reduction)
+- **PHP extension** — full PHP binding exposing all features via a native extension
+
+## Requirements
+
+### Rust (pdf-core, pdf-cli)
+
+- Rust stable toolchain — install via [rustup](https://rustup.rs)
+
+### PHP Extension (pdf-php)
+
+- Rust stable toolchain (same as above)
+- PHP development headers: `sudo apt install php-dev`
+- Clang development libraries: `sudo apt install libclang-dev`
+
+## Building
+
 ```bash
-cargo run --example generate_sample
+# Build all workspace members (debug)
+cargo build
+
+# Build release (recommended for PHP extension)
+cargo build --release
 ```
 
+## Running Tests
+
 ```bash
+# Run all Rust tests
+cargo test
+```
+
+## Rust Examples
+
+Examples write output PDFs to the `output/` directory.
+
+```bash
+# Basic document — place_text
+cargo run --example generate_sample
+
+# TextFlow — multi-page text reflow with mixed font styles
 cargo run --example generate_textflow
+
+# Line graphics — paths, rectangles, stroke, fill
+cargo run --example generate_graphics
+
+# Images — JPEG and PNG placement
+cargo run --example generate_images
+
+# Tables — streaming row layout with headers
+cargo run --example generate_tables
+
+# TrueType fonts — embed a .ttf font
+cargo run --example generate_truetype
+
+# Page numbers — edit completed pages to add "Page X of Y"
+cargo run --example generate_page_numbers
 ```
 
 ## PHP Extension
 
-### Prerequisites
-```bash
-sudo apt install php-dev libclang-dev
-```
-
 ### Build
-```bash
-cargo build --release
 
+```bash
 cargo build --release -p pdf-php
 ```
 
-### Run tests
+The compiled extension is at `target/release/libpdf_php.so`.
+
+### Run Tests
+
 ```bash
 php -d extension=target/release/libpdf_php.so pdf-php/tests/test.php
 ```
+
+### Run PHP Examples
+
+Each PHP example mirrors its Rust counterpart and writes to the `output/` directory.
+
+```bash
+EXT="-d extension=target/release/libpdf_php.so"
+
+php $EXT pdf-php/examples/generate_sample.php
+php $EXT pdf-php/examples/generate_textflow.php
+php $EXT pdf-php/examples/generate_graphics.php
+php $EXT pdf-php/examples/generate_images.php
+php $EXT pdf-php/examples/generate_tables.php
+php $EXT pdf-php/examples/generate_truetype.php
+php $EXT pdf-php/examples/generate_page_numbers.php
+```
+
+IDE type hints and autocompletion are provided by `pdf-php/pdf-php.stubs.php`.
+
+## Workspace Structure
+
+```
+pivot-pdf/
+├── pdf-core/          # Core library — all PDF generation logic
+│   ├── src/
+│   └── tests/
+├── pdf-php/           # PHP extension wrapping pdf-core
+│   ├── src/
+│   ├── tests/
+│   └── examples/
+├── docs/              # Architecture and feature documentation
+└── output/            # Generated PDFs (git-ignored)
+```
+
+## Coordinate System
+
+All coordinates are in PDF points (1 pt = 1/72 inch) with the origin at the **bottom-left** of the page. A standard US Letter page is 612 × 792 pt.
+
+## License
+
+[MIT](LICENSE)
