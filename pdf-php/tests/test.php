@@ -71,7 +71,7 @@ echo "Test 2 (in-memory): OK\n";
 // ----------------------------------------------------------
 // Test 3: TextFlow across pages
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/../../output/php-textflow.pdf';
+$outFile = tempnam(sys_get_temp_dir(), 'pdf_') . '.pdf';
 $doc = PdfDocument::create($outFile);
 
 $times = new TextStyle('Times-Roman', 11.0);
@@ -161,8 +161,8 @@ assert_true(
     "Space preserved between text flow spans"
 );
 
-// unlink($outFile);
-echo "Test 3 (textflow) $outFile: OK\n";
+unlink($outFile);
+echo "Test 3 (textflow): OK\n";
 
 // ----------------------------------------------------------
 // Test 4: TextStyle defaults
@@ -230,12 +230,11 @@ assert_true(
 echo "Test 7 (Times-Roman): OK\n";
 
 // ----------------------------------------------------------
-// Test 8: TrueType font (mirrors generate_truetype.rs)
+// Test 8: TrueType font
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/../../output/php-truetype.pdf';
+$outFile = tempnam(sys_get_temp_dir(), 'pdf_') . '.pdf';
 $fontPath = __DIR__ . '/../../pdf-core/tests/fixtures/DejaVuSans.ttf';
 $doc = PdfDocument::create($outFile);
-$doc->setCompression(true);
 $doc->setInfo("Creator", "rust-pdf-php-test");
 $doc->setInfo("Title", "TrueType Font Example");
 
@@ -363,12 +362,13 @@ assert_true(
     "TT PDF also contains builtin Type1 font"
 );
 
-echo "Test 8 (TrueType) $outFile: OK\n";
+unlink($outFile);
+echo "Test 8 (TrueType): OK\n";
 
 // ----------------------------------------------------------
-// Test 9: Image support (mirrors generate_images.rs)
+// Test 9: Image support
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/../../output/php-images.pdf';
+$outFile = tempnam(sys_get_temp_dir(), 'pdf_') . '.pdf';
 $fixturesDir = __DIR__ . '/../../pdf-core/tests/fixtures';
 $doc = PdfDocument::create($outFile);
 $doc->setCompression(true);
@@ -461,12 +461,13 @@ try {
 }
 assert_true($threw, "Invalid image data throws");
 
-echo "Test 9 (Images) $outFile: OK\n";
+unlink($outFile);
+echo "Test 9 (Images): OK\n";
 
 // ----------------------------------------------------------
-// Test 10: Tables (mirrors generate_tables.rs)
+// Test 10: Tables
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/../../output/php-tables.pdf';
+$outFile = tempnam(sys_get_temp_dir(), 'pdf_') . '.pdf';
 
 $departments = ["Engineering", "Marketing", "Sales", "HR", "Finance", "Operations"];
 $statuses    = ["Active", "Inactive", "Pending", "Suspended", "Active"];
@@ -567,7 +568,8 @@ assert_true(str_contains($bytes, '/Font'), "Tables PDF has font resources");
 // Compression filter is present (setCompression was enabled)
 assert_true(str_contains($bytes, '/Filter /FlateDecode'), "Tables PDF uses compression");
 
-echo "Test 10 (Tables) $outFile: OK\n";
+unlink($outFile);
+echo "Test 10 (Tables): OK\n";
 
 // ----------------------------------------------------------
 // Summary

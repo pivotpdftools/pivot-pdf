@@ -312,6 +312,22 @@ class PdfDocument
     ): void {}
 
     /**
+     * Place text at (x, y) using an explicit TextStyle.
+     *
+     * @param string    $text  Text to place
+     * @param float     $x     X coordinate (bottom-left origin)
+     * @param float     $y     Y coordinate (bottom-left origin)
+     * @param TextStyle $style Font and size to use
+     * @throws \Exception if the document has already ended or style is invalid
+     */
+    public function placeTextStyled(
+        string $text,
+        float $x,
+        float $y,
+        TextStyle $style
+    ): void {}
+
+    /**
      * Fit a TextFlow into a bounding rectangle on the current page.
      *
      * @param TextFlow $flow The text flow to fit

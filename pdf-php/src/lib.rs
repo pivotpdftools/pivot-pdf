@@ -586,6 +586,20 @@ impl PhpPdfDocument {
         })
     }
 
+    pub fn place_text_styled(
+        &mut self,
+        text: &str,
+        x: f64,
+        y: f64,
+        style: &PhpTextStyle,
+    ) -> Result<(), String> {
+        let core_style = style.to_core()?;
+        with_doc!(self, place_text_styled, doc => {
+            doc.place_text_styled(text, x, y, &core_style);
+            Ok(())
+        })
+    }
+
     pub fn fit_textflow(
         &mut self,
         flow: &mut PhpTextFlow,

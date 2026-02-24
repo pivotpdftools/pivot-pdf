@@ -567,3 +567,22 @@ Currently, examples for rust and php output files to `pdf-php/tests` and `/`. We
 complete
 
 ---
+
+# Issue 15: Split PHP tests and examples
+## Description
+The `test.php` file executes a series of tests with assertions. It also generates examples. These 2 things should be split between tests with asserts on temp files and examples which output pdf files into the `/output` directory.
+Each php example should mimic the core rust examples and produce the same content.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `pdf-php/examples/generate_sample.php`
+- [x] Task 3: Create `pdf-php/examples/generate_textflow.php`
+- [x] Task 4: Create `pdf-php/examples/generate_graphics.php`
+- [x] Task 5: Create `pdf-php/examples/generate_images.php`
+- [x] Task 6: Create `pdf-php/examples/generate_tables.php`
+- [x] Task 7: Create `pdf-php/examples/generate_truetype.php`
+- [x] Task 8: Create `pdf-php/examples/generate_page_numbers.php`
+- [x] Task 9: Refactor `test.php` to use temp files only (remove all writes to `output/`)
+
+## Status
+complete
