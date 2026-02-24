@@ -1,7 +1,8 @@
 use pdf_core::{ImageFit, PdfDocument, Rect};
 
 fn main() {
-    let path = "images_output.pdf";
+    std::fs::create_dir_all("output").unwrap();
+    let path = "output/rust-images.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");

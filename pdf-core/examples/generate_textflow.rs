@@ -1,7 +1,8 @@
 use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 
 fn main() {
-    let path = "textflow_output.pdf";
+    std::fs::create_dir_all("output").unwrap();
+    let path = "output/rust-textflow.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");

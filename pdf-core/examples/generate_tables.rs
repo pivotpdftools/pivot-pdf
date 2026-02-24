@@ -7,7 +7,7 @@
 /// Run with:
 ///   cargo run --example generate_tables
 ///
-/// Opens output at: target/tables_report.pdf
+/// Opens output at: output/rust-tables.pdf
 use pdf_core::{
     BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
     TableCursor,
@@ -77,7 +77,8 @@ fn new_page_rect() -> Rect {
 }
 
 fn main() {
-    let path = "tables_report.pdf";
+    std::fs::create_dir_all("output").unwrap();
+    let path = "output/rust-tables.pdf";
     let mut doc = PdfDocument::create(path).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Database Report Example");

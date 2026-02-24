@@ -7,7 +7,8 @@ fn main() {
         .nth(1)
         .unwrap_or_else(|| "pdf-core/tests/fixtures/DejaVuSans.ttf".to_string());
 
-    let path = "truetype_output.pdf";
+    std::fs::create_dir_all("output").unwrap();
+    let path = "output/rust-truetype.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");

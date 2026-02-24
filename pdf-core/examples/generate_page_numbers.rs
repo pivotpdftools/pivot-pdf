@@ -10,7 +10,7 @@
 /// Run with:
 ///   cargo run --example generate_page_numbers
 ///
-/// Opens output at: page_numbers.pdf
+/// Opens output at: output/rust-page-numbers.pdf
 use pdf_core::{BuiltinFont, FontRef, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 
 const PAGE_WIDTH: f64 = 612.0;
@@ -29,7 +29,8 @@ fn content_rect() -> Rect {
 }
 
 fn main() {
-    let path = "page_numbers.pdf";
+    std::fs::create_dir_all("output").unwrap();
+    let path = "output/rust-page-numbers.pdf";
     let mut doc = PdfDocument::create(path).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Page Numbering Example");

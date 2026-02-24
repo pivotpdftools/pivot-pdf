@@ -551,3 +551,19 @@ doc.end_document();
 complete
 
 ---
+
+# Issue 14: Organize example output files
+## Description
+Currently, examples for rust and php output files to `pdf-php/tests` and `/`. We need better organization and file naming convention.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `output/` directory at workspace root with `.gitkeep`
+- [x] Task 3: Update `.gitignore` to use `output/*.pdf` pattern instead of individual file entries
+- [x] Task 4: Update all 7 Rust examples to output to `output/rust-{feature}.pdf`
+- [x] Task 5: Update PHP `test.php` to output to `output/php-{feature}.pdf`
+
+## Status
+complete
+
+---

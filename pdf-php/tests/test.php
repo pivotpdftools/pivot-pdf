@@ -71,7 +71,7 @@ echo "Test 2 (in-memory): OK\n";
 // ----------------------------------------------------------
 // Test 3: TextFlow across pages
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/php-textflow_output.pdf';
+$outFile = __DIR__ . '/../../output/php-textflow.pdf';
 $doc = PdfDocument::create($outFile);
 
 $times = new TextStyle('Times-Roman', 11.0);
@@ -232,7 +232,7 @@ echo "Test 7 (Times-Roman): OK\n";
 // ----------------------------------------------------------
 // Test 8: TrueType font (mirrors generate_truetype.rs)
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/php-truetype_output.pdf';
+$outFile = __DIR__ . '/../../output/php-truetype.pdf';
 $fontPath = __DIR__ . '/../../pdf-core/tests/fixtures/DejaVuSans.ttf';
 $doc = PdfDocument::create($outFile);
 $doc->setCompression(true);
@@ -368,7 +368,7 @@ echo "Test 8 (TrueType) $outFile: OK\n";
 // ----------------------------------------------------------
 // Test 9: Image support (mirrors generate_images.rs)
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/php-images_output.pdf';
+$outFile = __DIR__ . '/../../output/php-images.pdf';
 $fixturesDir = __DIR__ . '/../../pdf-core/tests/fixtures';
 $doc = PdfDocument::create($outFile);
 $doc->setCompression(true);
@@ -466,7 +466,7 @@ echo "Test 9 (Images) $outFile: OK\n";
 // ----------------------------------------------------------
 // Test 10: Tables (mirrors generate_tables.rs)
 // ----------------------------------------------------------
-$outFile = __DIR__ . '/php-tables_output.pdf';
+$outFile = __DIR__ . '/../../output/php-tables.pdf';
 
 $departments = ["Engineering", "Marketing", "Sales", "HR", "Finance", "Operations"];
 $statuses    = ["Active", "Inactive", "Pending", "Suspended", "Active"];
