@@ -773,6 +773,32 @@ impl PhpPdfDocument {
         })
     }
 
+    /// Returns the number of completed pages.
+    pub fn page_count(&self) -> Result<i64, String> {
+        match self.inner.as_ref() {
+            Some(inner) => match inner {
+                DocumentInner::File(doc) => Ok(doc.page_count() as i64),
+                DocumentInner::Memory(doc) => Ok(doc.page_count() as i64),
+            },
+            None => Err("page_count: document already ended".to_string()),
+        }
+    }
+
+    /// Open a completed page for editing (1-indexed).
+    ///
+    /// Used for adding overlay content such as page numbers after all
+    /// pages have been written. If a page is currently open, it is
+    /// automatically closed first.
+    pub fn open_page(&mut self, page_num: i64) -> Result<(), String> {
+        if page_num < 1 {
+            return Err(format!("open_page: page_num must be >= 1, got {}", page_num));
+        }
+        with_doc!(self, open_page, doc => {
+            doc.open_page(page_num as usize)
+                .map_err(|e| format!("open_page failed: {}", e))
+        })
+    }
+
     pub fn end_page(&mut self) -> Result<(), String> {
         with_doc!(self, end_page, doc => {
             doc.end_page().map_err(|e| {

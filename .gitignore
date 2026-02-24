@@ -7,4 +7,5 @@
 /graphics_output.pdf
 /images_output.pdf
 /tables_report.pdf
+/page_numbers.pdf
 /pdf-php/tests/*.pdf

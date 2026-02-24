@@ -485,6 +485,31 @@ class PdfDocument
     ): void {}
 
     /**
+     * Returns the number of completed pages.
+     *
+     * A page is "completed" once `endPage()` has been called for it.
+     * An open page (after `beginPage()` but before `endPage()`) is not
+     * yet counted.
+     *
+     * @return int Number of completed pages
+     * @throws \Exception if the document has already ended
+     */
+    public function pageCount(): int {}
+
+    /**
+     * Open a completed page for editing (1-indexed).
+     *
+     * Used for adding overlay content such as page numbers ("Page X of Y")
+     * after all pages have been written. Call `endPage()` when done.
+     *
+     * If a page is currently open, it is automatically closed first.
+     *
+     * @param int $pageNum 1-indexed page number to open for editing
+     * @throws \Exception if pageNum is out of range or document already ended
+     */
+    public function openPage(int $pageNum): void {}
+
+    /**
      * End the current page.
      *
      * @throws \Exception if the document has already ended

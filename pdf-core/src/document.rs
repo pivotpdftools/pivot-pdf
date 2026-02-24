@@ -36,6 +36,21 @@ struct TrueTypeFontObjIds {
     tounicode: ObjId,
 }
 
+/// Accumulated record for a completed page.
+/// Page dictionaries are deferred until `end_document()` so that
+/// overlay content streams (e.g. page numbers) can be appended
+/// after all pages have been written.
+struct PageRecord {
+    obj_id: ObjId,
+    /// Content stream IDs: first is the main stream, any beyond that are overlays.
+    content_ids: Vec<ObjId>,
+    width: f64,
+    height: f64,
+    used_fonts: BTreeSet<BuiltinFont>,
+    used_truetype_fonts: BTreeSet<usize>,
+    used_images: BTreeSet<usize>,
+}
+
 /// High-level API for building PDF documents.
 ///
 /// Generic over `Write` so it works with files (`BufWriter<File>`),
@@ -47,7 +62,7 @@ struct TrueTypeFontObjIds {
 pub struct PdfDocument<W: Write> {
     writer: PdfWriter<W>,
     info: Vec<(String, String)>,
-    page_obj_ids: Vec<ObjId>,
+    page_records: Vec<PageRecord>,
     current_page: Option<PageBuilder>,
     next_obj_num: u32,
     /// Maps each used builtin font to its written ObjId.
@@ -77,6 +92,9 @@ struct PageBuilder {
     used_fonts: BTreeSet<BuiltinFont>,
     used_truetype_fonts: BTreeSet<usize>,
     used_images: BTreeSet<usize>,
+    /// When `Some(idx)`, this builder is adding an overlay to `page_records[idx]`
+    /// rather than creating a new page.
+    overlay_for: Option<usize>,
 }
 
 impl PdfDocument<BufWriter<File>> {
@@ -97,7 +115,7 @@ impl<W: Write> PdfDocument<W> {
         Ok(PdfDocument {
             writer: pdf_writer,
             info: Vec::new(),
-            page_obj_ids: Vec::new(),
+            page_records: Vec::new(),
             current_page: None,
             next_obj_num: FIRST_PAGE_OBJ_NUM,
             font_obj_ids: BTreeMap::new(),
@@ -146,6 +164,11 @@ impl<W: Write> PdfDocument<W> {
         Ok(FontRef::TrueType(TrueTypeFontId(idx)))
     }
 
+    /// Returns the number of completed pages (pages for which `end_page` has been called).
+    pub fn page_count(&self) -> usize {
+        self.page_records.len()
+    }
+
     /// Begin a new page with the given dimensions in points.
     /// If a page is currently open, it is automatically closed.
     pub fn begin_page(&mut self, width: f64, height: f64) -> &mut Self {
@@ -159,8 +182,51 @@ impl<W: Write> PdfDocument<W> {
             used_fonts: BTreeSet::new(),
             used_truetype_fonts: BTreeSet::new(),
             used_images: BTreeSet::new(),
+            overlay_for: None,
         });
         self
+    }
+
+    /// Open a completed page for editing (1-indexed).
+    ///
+    /// Used for adding overlay content such as page numbers ("Page X of Y")
+    /// after all pages have been written. The overlay content is written as
+    /// an additional content stream appended to the page's `/Contents` array.
+    ///
+    /// If a page is currently open, it is automatically closed first.
+    ///
+    /// Returns an error if `page_num` is out of range.
+    pub fn open_page(&mut self, page_num: usize) -> io::Result<()> {
+        if page_num == 0 || page_num > self.page_records.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "open_page: page_num {} out of range (1..={})",
+                    page_num,
+                    self.page_records.len()
+                ),
+            ));
+        }
+
+        if self.current_page.is_some() {
+            self.end_page()?;
+        }
+
+        let idx = page_num - 1;
+        let width = self.page_records[idx].width;
+        let height = self.page_records[idx].height;
+
+        self.current_page = Some(PageBuilder {
+            width,
+            height,
+            content_ops: Vec::new(),
+            used_fonts: BTreeSet::new(),
+            used_truetype_fonts: BTreeSet::new(),
+            used_images: BTreeSet::new(),
+            overlay_for: Some(idx),
+        });
+
+        Ok(())
     }
 
     /// Place text at position (x, y) using default 12pt Helvetica.
@@ -647,8 +713,9 @@ impl<W: Write> PdfDocument<W> {
         &self.truetype_font_obj_ids[&idx]
     }
 
-    /// End the current page. Writes page objects to the
-    /// writer and frees page content from memory.
+    /// End the current page. Writes the content stream to the writer
+    /// and frees page content from memory. The page dictionary is
+    /// deferred until `end_document()` so overlay streams can be added.
     pub fn end_page(&mut self) -> io::Result<()> {
         let page = self
             .current_page
@@ -673,81 +740,135 @@ impl<W: Write> PdfDocument<W> {
 
         let content_id = ObjId(self.next_obj_num, 0);
         self.next_obj_num += 1;
-        let page_id = ObjId(self.next_obj_num, 0);
-        self.next_obj_num += 1;
 
-        // Write content stream
+        // Write content stream immediately (keeps memory usage low)
         let content_stream = self.make_stream(vec![], page.content_ops);
         self.writer.write_object(content_id, &content_stream)?;
 
-        // Build font resource entries for builtin fonts
-        let font_entries: Vec<(&str, PdfObject)> = page
-            .used_fonts
+        match page.overlay_for {
+            None => {
+                // New page: pre-allocate the page dict ObjId and store the record.
+                // The page dictionary itself is written in write_page_dicts().
+                let page_id = ObjId(self.next_obj_num, 0);
+                self.next_obj_num += 1;
+
+                self.page_records.push(PageRecord {
+                    obj_id: page_id,
+                    content_ids: vec![content_id],
+                    width: page.width,
+                    height: page.height,
+                    used_fonts: page.used_fonts,
+                    used_truetype_fonts: page.used_truetype_fonts,
+                    used_images: page.used_images,
+                });
+            }
+            Some(idx) => {
+                // Overlay: append content stream to existing page record.
+                let record = &mut self.page_records[idx];
+                record.content_ids.push(content_id);
+                record.used_fonts.extend(page.used_fonts);
+                record.used_truetype_fonts.extend(page.used_truetype_fonts);
+                record.used_images.extend(page.used_images);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Build the font resource dictionary for a page.
+    fn build_font_dict(
+        &self,
+        used_fonts: &[BuiltinFont],
+        used_truetype: &[usize],
+    ) -> PdfObject {
+        let mut entries: Vec<(String, PdfObject)> = used_fonts
             .iter()
-            .map(|f| (f.pdf_name(), PdfObject::Reference(self.font_obj_ids[f])))
+            .map(|f| (f.pdf_name().to_string(), PdfObject::Reference(self.font_obj_ids[f])))
             .collect();
 
-        // Add TrueType font entries (reference the Type0 obj)
-        // We need owned strings for the PDF names
-        let tt_entries: Vec<(String, PdfObject)> = page
-            .used_truetype_fonts
-            .iter()
-            .map(|&idx| {
-                let obj_ids = &self.truetype_font_obj_ids[&idx];
-                let name = self.truetype_fonts[idx].pdf_name.clone();
-                (name, PdfObject::Reference(obj_ids.type0))
-            })
-            .collect();
+        for &idx in used_truetype {
+            let name = self.truetype_fonts[idx].pdf_name.clone();
+            let type0_id = self.truetype_font_obj_ids[&idx].type0;
+            entries.push((name, PdfObject::Reference(type0_id)));
+        }
 
-        // Combine into a single dict. Since PdfObject::dict takes
-        // &str, we need to build the Dictionary variant directly.
-        let mut all_font_entries: Vec<(String, PdfObject)> = font_entries
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect();
-        all_font_entries.extend(tt_entries);
+        PdfObject::Dictionary(entries)
+    }
 
-        let font_dict = PdfObject::Dictionary(all_font_entries);
+    /// Build the resource dictionary for a page.
+    fn build_resource_dict(
+        &self,
+        used_fonts: &[BuiltinFont],
+        used_truetype: &[usize],
+        used_images: &[usize],
+    ) -> PdfObject {
+        let font_dict = self.build_font_dict(used_fonts, used_truetype);
 
-        // Build XObject dict for images used on this page
         let xobject_entries: Vec<(String, PdfObject)> = used_images
             .iter()
             .filter_map(|idx| {
-                self.image_obj_ids.get(idx).map(|ids| {
-                    (ids.pdf_name.clone(), PdfObject::Reference(ids.xobject))
-                })
+                self.image_obj_ids
+                    .get(idx)
+                    .map(|ids| (ids.pdf_name.clone(), PdfObject::Reference(ids.xobject)))
             })
             .collect();
 
-        // Build Resources dict with Font and optional XObject
         let mut resource_entries: Vec<(String, PdfObject)> =
             vec![("Font".to_string(), font_dict)];
         if !xobject_entries.is_empty() {
-            resource_entries.push((
-                "XObject".to_string(),
-                PdfObject::Dictionary(xobject_entries),
-            ));
+            resource_entries
+                .push(("XObject".to_string(), PdfObject::Dictionary(xobject_entries)));
         }
 
-        // Write page dictionary
-        let page_dict = PdfObject::dict(vec![
-            ("Type", PdfObject::name("Page")),
-            ("Parent", PdfObject::Reference(PAGES_OBJ)),
-            (
-                "MediaBox",
-                PdfObject::array(vec![
-                    PdfObject::Integer(0),
-                    PdfObject::Integer(0),
-                    PdfObject::Real(page.width),
-                    PdfObject::Real(page.height),
-                ]),
-            ),
-            ("Contents", PdfObject::Reference(content_id)),
-            ("Resources", PdfObject::Dictionary(resource_entries)),
-        ]);
-        self.writer.write_object(page_id, &page_dict)?;
+        PdfObject::Dictionary(resource_entries)
+    }
 
-        self.page_obj_ids.push(page_id);
+    /// Build the `/Contents` entry: single reference for one stream, array for multiple.
+    fn build_contents(content_ids: &[ObjId]) -> PdfObject {
+        if content_ids.len() == 1 {
+            PdfObject::Reference(content_ids[0])
+        } else {
+            PdfObject::array(content_ids.iter().map(|id| PdfObject::Reference(*id)).collect())
+        }
+    }
+
+    /// Write page dictionaries for all pages. Called from `end_document()`
+    /// after all content streams (including overlays) have been written.
+    fn write_page_dicts(&mut self) -> io::Result<()> {
+        for i in 0..self.page_records.len() {
+            // Copy out page data to release the borrow before writing
+            let obj_id = self.page_records[i].obj_id;
+            let content_ids: Vec<ObjId> =
+                self.page_records[i].content_ids.iter().copied().collect();
+            let width = self.page_records[i].width;
+            let height = self.page_records[i].height;
+            let used_fonts: Vec<BuiltinFont> =
+                self.page_records[i].used_fonts.iter().copied().collect();
+            let used_truetype: Vec<usize> =
+                self.page_records[i].used_truetype_fonts.iter().copied().collect();
+            let used_images: Vec<usize> =
+                self.page_records[i].used_images.iter().copied().collect();
+
+            let resources = self.build_resource_dict(&used_fonts, &used_truetype, &used_images);
+            let contents = Self::build_contents(&content_ids);
+
+            let page_dict = PdfObject::dict(vec![
+                ("Type", PdfObject::name("Page")),
+                ("Parent", PdfObject::Reference(PAGES_OBJ)),
+                (
+                    "MediaBox",
+                    PdfObject::array(vec![
+                        PdfObject::Integer(0),
+                        PdfObject::Integer(0),
+                        PdfObject::Real(width),
+                        PdfObject::Real(height),
+                    ]),
+                ),
+                ("Contents", contents),
+                ("Resources", resources),
+            ]);
+            self.writer.write_object(obj_id, &page_dict)?;
+        }
         Ok(())
     }
 
@@ -845,7 +966,7 @@ impl<W: Write> PdfDocument<W> {
         Ok(())
     }
 
-    /// Finish the document. Writes the catalog, pages tree,
+    /// Finish the document. Writes page dictionaries, the catalog, pages tree,
     /// info dictionary, xref table, and trailer.
     /// Consumes self -- no further operations are possible.
     pub fn end_document(mut self) -> io::Result<W> {
@@ -853,6 +974,9 @@ impl<W: Write> PdfDocument<W> {
         if self.current_page.is_some() {
             self.end_page()?;
         }
+
+        // Write page dictionaries (deferred so overlays can be accumulated first)
+        self.write_page_dicts()?;
 
         // Write TrueType font objects (deferred until now)
         self.write_truetype_fonts()?;
@@ -875,11 +999,11 @@ impl<W: Write> PdfDocument<W> {
 
         // Write pages tree (obj 2)
         let kids: Vec<PdfObject> = self
-            .page_obj_ids
+            .page_records
             .iter()
-            .map(|id| PdfObject::Reference(*id))
+            .map(|r| PdfObject::Reference(r.obj_id))
             .collect();
-        let page_count = self.page_obj_ids.len() as i64;
+        let page_count = self.page_records.len() as i64;
         let pages = PdfObject::dict(vec![
             ("Type", PdfObject::name("Pages")),
             ("Kids", PdfObject::Array(kids)),
