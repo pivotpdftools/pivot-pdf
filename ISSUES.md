@@ -507,3 +507,47 @@ all rows in memory. `cursor.is_first_row()` enables automatic header repetition 
 complete
 
 ---
+
+# Issue 13: Edit Page
+## Description
+As a program is creating pages a loop is used to place content. The loop typically calls end_page() followed by a begin_page(). Eventually the final end_page() and then an end_document() is called and the pdf file is considered complete.
+Consider the use case: **Page Numbering**. When writing pages, the program won't know how many total pages there are until they have all been written. In order to create Page Numbers such as `Page x of y` where y is the total number of pages, we need to be able to "edit" the pages after they have been written. I think the PDF spec's 7.5.6 Incremental Updates can be used for this purpose. Consider this psuedo code sketch:
+
+```ts
+let doc = new Document("path.to.pdf")
+while (true) {
+    doc.begin_page()
+    result = doc.fit_textflow(...)
+    doc.end_page();
+
+    if (result === "stop") break;
+    if (result === "box_empty") break;
+}
+
+//Here we want to create page numbering
+for(i=1; i==doc.page_count; i++) {
+    doc.open_page(i)
+    let tf = new TextFlow()
+    tf.add_text("Page {} of {}", i, doc.page_count);
+    let rect = ...find the lower right corner of page
+    doc.fit_textflow(tf);
+}
+
+doc.end_document();
+```
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `PageRecord` struct, `overlay_for` to `PageBuilder`, replace `page_obj_ids` with `page_records` in `document.rs`
+- [x] Task 3: Modify `end_page()` to defer page dict writing (store `PageRecord` instead of writing dict)
+- [x] Task 4: Add `write_page_dicts()` helper and modify `end_document()` to use it
+- [x] Task 5: Add `page_count()` and `open_page()` public methods
+- [x] Task 6: Write tests in `pdf-core/tests/edit_page_test.rs`
+- [x] Task 7: Update PHP extension with `pageCount()` and `openPage()` methods and stubs
+- [x] Task 8: Create example `pdf-core/examples/generate_page_numbers.rs`
+- [x] Task 9: Create documentation `docs/features/edit-page.md`
+
+## Status
+complete
+
+---
