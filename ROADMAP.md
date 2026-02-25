@@ -134,7 +134,9 @@ These directly address known gaps in the core generation loop:
 | Language | Status | Notes |
 |----------|--------|-------|
 | Rust | ✅ Available | Native — this is the core library |
-| PHP | ✅ Available | Full binding via `ext-php-rs` |
+| PHP (Linux) | ✅ Available | Release artifacts built via CI for PHP 8.3–8.5 |
+| PHP (macOS) | ✅ Available | Release artifacts built via CI for PHP 8.3–8.5 |
+| PHP (Windows) | 🔲 Planned | `ext-php-rs` requires nightly Rust + MSVC link-time symbol resolution; CI not yet stable — tracked separately |
 | CLI | 🔲 Planned | `pdf-cli` workspace member exists; needs a full command-line interface |
 | Python | 🔲 Planned | `PyO3` for Rust/Python bindings |
 | Go | 🔲 Planned | CGO binding or pure Go wrapper |
@@ -142,9 +144,9 @@ These directly address known gaps in the core generation loop:
 | Java | 🔲 Future | JNI or JNA |
 | Node.js / WASM | 🔲 Future | `wasm-bindgen` — good fit for browser-side generation |
 
-Priority order: **CLI → Python → Go → C# → Java → Node.js**.
+Priority order: **PHP (Windows) → CLI → Python → Go → C# → Java → Node.js**.
 
-Python is prioritized because of its widespread use in data pipelines and report generation. Go is prioritized for its common use in web microservices.
+PHP Windows support is prioritized because PHP developers on Windows targeting Linux deployments need a local build path. Python is next due to its widespread use in data pipelines and report generation.
 
 ---
 
@@ -199,6 +201,7 @@ A benchmark suite using Rust's `criterion` crate is planned as a separate effort
 | Full font embedding | TrueType fonts are embedded in full; subsetting is not yet implemented |
 | Per-page font resources | All loaded fonts are declared in every page's resource dict, even if unused on that page |
 | Standard font availability | The 14 standard fonts are used without embedding; PDF 2.0 deprecated this guarantee |
+| PHP Windows build | `ext-php-rs` requires nightly Rust and MSVC link-time PHP symbol resolution on Windows; version skew between `setup-php` and `windows.php.net` dev pack availability causes persistent LNK2019 linker failures in CI |
 
 ---
 

@@ -14,74 +14,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Windows is excluded: ext-php-rs requires nightly Rust + MSVC link-time PHP symbol
+        # resolution, and the interaction between setup-php's rolling patch installs and
+        # windows.php.net's dev pack availability causes persistent LNK2019 failures.
+        # Windows support is tracked in the roadmap and will be added in a dedicated issue.
+        os: [ubuntu-latest, macos-latest]
         php: ['8.3', '8.4', '8.5']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      # Linux / macOS: setup-php works correctly; PHP symbols are available at runtime.
       - name: Setup PHP ${{ matrix.php }}
-        if: runner.os != 'Windows'
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
 
-      # Windows: setup-php may install a patch release whose dev pack is not yet published on
-      # windows.php.net. ext-php-rs build.rs calls `php --version` and independently downloads
-      # the matching dev pack — if that version is absent, it silently creates an empty php8.lib
-      # and linking fails with LNK2019 for every PHP Zend symbol.
-      #
-      # Fix: bypass setup-php on Windows. Instead, find the latest patch that has BOTH a PHP
-      # binary zip AND a dev pack on windows.php.net, then install them together. ext-php-rs
-      # detects the installed version and downloads the matching dev pack — which now exists.
-      - name: Setup PHP ${{ matrix.php }} (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $minor = [int]("${{ matrix.php }}".Split('.')[1])
-          $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
-
-          $found = $false
-          for ($p = 40; $p -ge 0 -and -not $found; $p--) {
-            $ver = "${{ matrix.php }}.$p"
-            $phpFile = "php-$ver-nts-Win32-$vs-x64.zip"
-            $devFile = "php-devel-pack-$ver-nts-Win32-$vs-x64.zip"
-            foreach ($base in @(
-              "https://windows.php.net/downloads/releases",
-              "https://windows.php.net/downloads/releases/archives"
-            )) {
-              try {
-                Invoke-WebRequest "$base/$phpFile" -OutFile php.zip -ErrorAction Stop
-                Invoke-WebRequest "$base/$devFile" -OutFile php-dev.zip -ErrorAction Stop
-                $found = $true
-                Write-Host "Using PHP $ver"
-                break
-              } catch {}
-            }
-          }
-          if (-not $found) { throw "No PHP ${{ matrix.php }}.* binary + dev pack found on windows.php.net" }
-
-          # PHP binary zip extracts flat (no root subdirectory)
-          New-Item -ItemType Directory -Path C:\php | Out-Null
-          Expand-Archive php.zip -DestinationPath C:\php
-          echo "C:\php" >> $env:GITHUB_PATH
-
-          # Dev pack zip extracts into a single subdirectory (e.g. php-8.3.29-devel-vs16-x64)
-          New-Item -ItemType Directory -Path C:\php-dev | Out-Null
-          Expand-Archive php-dev.zip -DestinationPath C:\php-dev
-          $devDir = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
-          echo "PHP_BUILD_DIR=$devDir" >> $env:GITHUB_ENV
-
       - name: Install Rust (stable)
-        if: runner.os != 'Windows'
         uses: dtolnay/rust-toolchain@stable
-
-      # ext-php-rs uses #![feature(abi_vectorcall)] on Windows, which requires nightly
-      - name: Install Rust (nightly, Windows)
-        if: runner.os == 'Windows'
-        uses: dtolnay/rust-toolchain@nightly
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -112,13 +62,6 @@ jobs:
         run: |
           VER=$(php -r "echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;")
           cp target/release/libpdf_php.dylib "pdf_php-macos-php${VER}.so"
-
-      - name: Stage artifact (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $Ver = php -r "echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;"
-          Copy-Item target\release\pdf_php.dll "pdf_php-windows-php${Ver}.dll"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
