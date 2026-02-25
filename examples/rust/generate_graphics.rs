@@ -1,8 +1,8 @@
 use pdf_core::{Color, PdfDocument};
 
 fn main() {
-    std::fs::create_dir_all("output").unwrap();
-    let path = "output/rust-graphics.pdf";
+    std::fs::create_dir_all("examples/output").unwrap();
+    let path = "examples/output/rust-graphics.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");

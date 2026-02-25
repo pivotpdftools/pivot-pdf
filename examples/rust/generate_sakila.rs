@@ -5,9 +5,9 @@
 /// in the lower-left corner of every page.
 ///
 /// Run with:
-///   cargo run --example generate_sakila -- /path/to/sakila.db
+///   cargo run --example generate_sakila -p pdf-examples -- /path/to/sakila.db
 ///
-/// Output: output/rust-sakila.pdf
+/// Output: examples/output/rust-sakila.pdf
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
     Table, TableCursor, TextStyle,
@@ -128,8 +128,8 @@ fn main() {
     }
     let db_path = &args[1];
 
-    std::fs::create_dir_all("output").unwrap();
-    let out_path = "output/rust-sakila.pdf";
+    std::fs::create_dir_all("examples/output").unwrap();
+    let out_path = "examples/output/rust-sakila.pdf";
 
     let conn = Connection::open(db_path).expect("open database");
 

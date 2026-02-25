@@ -2,14 +2,14 @@
 /**
  * Line graphics example.
  *
- * Mirrors: pdf-core/examples/generate_graphics.rs
+ * Mirrors: examples/rust/generate_graphics.rs
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_graphics.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_graphics.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path = __DIR__ . '/../../output/php-graphics.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path = __DIR__ . '/../output/php-graphics.pdf';
 
 $doc = PdfDocument::create($path);
 $doc->setCompression(true);

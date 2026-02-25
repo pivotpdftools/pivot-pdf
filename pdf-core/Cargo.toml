@@ -7,6 +7,3 @@ edition = "2021"
 flate2 = "1"
 png = "0.17"
 ttf-parser = "0.25"
-
-[dev-dependencies]
-rusqlite = { version = "0.32", features = ["bundled"] }

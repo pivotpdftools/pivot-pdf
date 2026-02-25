@@ -48,29 +48,29 @@ cargo test
 
 ## Rust Examples
 
-Examples write output PDFs to the `output/` directory.
+Examples write output PDFs to the `examples/output/` directory.
 
 ```bash
 # Basic document — place_text
-cargo run --example generate_sample
+cargo run --example generate_sample -p pdf-examples
 
 # TextFlow — multi-page text reflow with mixed font styles
-cargo run --example generate_textflow
+cargo run --example generate_textflow -p pdf-examples
 
 # Line graphics — paths, rectangles, stroke, fill
-cargo run --example generate_graphics
+cargo run --example generate_graphics -p pdf-examples
 
 # Images — JPEG and PNG placement
-cargo run --example generate_images
+cargo run --example generate_images -p pdf-examples
 
 # Tables — streaming row layout with headers
-cargo run --example generate_tables
+cargo run --example generate_tables -p pdf-examples
 
 # TrueType fonts — embed a .ttf font
-cargo run --example generate_truetype
+cargo run --example generate_truetype -p pdf-examples
 
 # Page numbers — edit completed pages to add "Page X of Y"
-cargo run --example generate_page_numbers
+cargo run --example generate_page_numbers -p pdf-examples
 ```
 
 ## PHP Extension
@@ -91,18 +91,18 @@ php -d extension=target/release/libpdf_php.so pdf-php/tests/test.php
 
 ### Run PHP Examples
 
-Each PHP example mirrors its Rust counterpart and writes to the `output/` directory.
+Each PHP example mirrors its Rust counterpart and writes to the `examples/output/` directory.
 
 ```bash
 EXT="-d extension=target/release/libpdf_php.so"
 
-php $EXT pdf-php/examples/generate_sample.php
-php $EXT pdf-php/examples/generate_textflow.php
-php $EXT pdf-php/examples/generate_graphics.php
-php $EXT pdf-php/examples/generate_images.php
-php $EXT pdf-php/examples/generate_tables.php
-php $EXT pdf-php/examples/generate_truetype.php
-php $EXT pdf-php/examples/generate_page_numbers.php
+php $EXT examples/php/generate_sample.php
+php $EXT examples/php/generate_textflow.php
+php $EXT examples/php/generate_graphics.php
+php $EXT examples/php/generate_images.php
+php $EXT examples/php/generate_tables.php
+php $EXT examples/php/generate_truetype.php
+php $EXT examples/php/generate_page_numbers.php
 ```
 
 IDE type hints and autocompletion are provided by `pdf-php/pdf-php.stubs.php`.
@@ -116,10 +116,12 @@ pivot-pdf/
 │   └── tests/
 ├── pdf-php/           # PHP extension wrapping pdf-core
 │   ├── src/
-│   ├── tests/
-│   └── examples/
-├── docs/              # Architecture and feature documentation
-└── output/            # Generated PDFs (git-ignored)
+│   └── tests/
+├── examples/          # Rust and PHP example programs
+│   ├── rust/
+│   ├── php/
+│   └── output/        # Generated PDFs (git-ignored)
+└── docs/              # Architecture and feature documentation
 ```
 
 ## Coordinate System

@@ -5,9 +5,9 @@
 /// checking `cursor.is_first_row()` before placing each data row.
 ///
 /// Run with:
-///   cargo run --example generate_tables
+///   cargo run --example generate_tables -p pdf-examples
 ///
-/// Opens output at: output/rust-tables.pdf
+/// Opens output at: examples/output/rust-tables.pdf
 use pdf_core::{
     BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
     TableCursor,
@@ -77,8 +77,8 @@ fn new_page_rect() -> Rect {
 }
 
 fn main() {
-    std::fs::create_dir_all("output").unwrap();
-    let path = "output/rust-tables.pdf";
+    std::fs::create_dir_all("examples/output").unwrap();
+    let path = "examples/output/rust-tables.pdf";
     let mut doc = PdfDocument::create(path).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Database Report Example");

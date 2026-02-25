@@ -2,5 +2,6 @@
 resolver = "2"
 members = [
     "pdf-core",
-    "pdf-php"
+    "pdf-php",
+    "examples"
 ]

@@ -2,14 +2,14 @@
 /**
  * TextFlow example — multi-page text with multiple fonts.
  *
- * Mirrors: pdf-core/examples/generate_textflow.rs
+ * Mirrors: examples/rust/generate_textflow.rs
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_textflow.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_textflow.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path = __DIR__ . '/../../output/php-textflow.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path = __DIR__ . '/../output/php-textflow.pdf';
 
 $doc = PdfDocument::create($path);
 $doc->setCompression(true);

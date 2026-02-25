@@ -1,0 +1,40 @@
+[package]
+name = "pdf-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pdf-core = { path = "../pdf-core" }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[[example]]
+name = "generate_sample"
+path = "rust/generate_sample.rs"
+
+[[example]]
+name = "generate_textflow"
+path = "rust/generate_textflow.rs"
+
+[[example]]
+name = "generate_graphics"
+path = "rust/generate_graphics.rs"
+
+[[example]]
+name = "generate_images"
+path = "rust/generate_images.rs"
+
+[[example]]
+name = "generate_tables"
+path = "rust/generate_tables.rs"
+
+[[example]]
+name = "generate_truetype"
+path = "rust/generate_truetype.rs"
+
+[[example]]
+name = "generate_page_numbers"
+path = "rust/generate_page_numbers.rs"
+
+[[example]]
+name = "generate_sakila"
+path = "rust/generate_sakila.rs"

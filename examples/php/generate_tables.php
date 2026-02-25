@@ -2,7 +2,7 @@
 /**
  * Database report example — multi-page table with streaming row placement.
  *
- * Mirrors: pdf-core/examples/generate_tables.rs
+ * Mirrors: examples/rust/generate_tables.rs
  *
  * Demonstrates:
  * - Streaming row-by-row placement using fitRow() + TableCursor
@@ -10,11 +10,11 @@
  * - Alternating row background colors
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_tables.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_tables.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path = __DIR__ . '/../../output/php-tables.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path = __DIR__ . '/../output/php-tables.pdf';
 
 $departments = ["Engineering", "Marketing", "Sales", "HR", "Finance", "Operations"];
 $statuses    = ["Active", "Inactive", "Pending", "Suspended", "Active"];
@@ -29,8 +29,12 @@ $headerStyle = new CellStyle();
 $headerStyle->font_name = "Helvetica-Bold";
 $headerStyle->font_size = 9.0;
 $headerStyle->padding   = 5.0;
-$headerStyle->setBackgroundColor(new Color(0.2, 0.3, 0.5));
-$headerStyle->setTextColor(new Color(1.0, 1.0, 1.0));
+
+$headerBgColor = new Color(0.2, 0.3, 0.5);
+$headerStyle->setBackgroundColor($headerBgColor);
+
+$headerFgColor = new Color(1.0, 1.0, 1.0);
+$headerStyle->setTextColor($headerFgColor);
 
 $headerRow = new Row([
     Cell::styled("ID",         $headerStyle),

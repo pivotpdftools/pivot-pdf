@@ -2,18 +2,18 @@
 /**
  * TrueType font example — embedded font with multi-page TextFlow.
  *
- * Mirrors: pdf-core/examples/generate_truetype.rs
+ * Mirrors: examples/rust/generate_truetype.rs
  *
  * Uses DejaVu Sans from the test fixtures by default. Pass a font path
  * as the first argument to use a different font:
  *   php ... generate_truetype.php /path/to/font.ttf
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_truetype.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_truetype.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path     = __DIR__ . '/../../output/php-truetype.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path     = __DIR__ . '/../output/php-truetype.pdf';
 $fontPath = $argv[1] ?? __DIR__ . '/../../pdf-core/tests/fixtures/DejaVuSans.ttf';
 
 $doc = PdfDocument::create($path);

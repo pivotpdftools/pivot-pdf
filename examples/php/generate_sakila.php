@@ -2,7 +2,7 @@
 /**
  * Large PDF report from the Sakila SQLite database.
  *
- * Mirrors: pdf-core/examples/generate_sakila.rs
+ * Mirrors: examples/rust/generate_sakila.rs
  *
  * Queries rental history (3475 rows) and renders it as a multi-page landscape
  * table. The table header repeats on each page. A "Page X of Y" footer appears
@@ -10,7 +10,7 @@
  *
  * Run with:
  *   php -d extension=target/release/libpdf_php.so \
- *       pdf-php/examples/generate_sakila.php /path/to/sakila.db
+ *       examples/php/generate_sakila.php /path/to/sakila.db
  */
 
 if ($argc < 2) {
@@ -19,8 +19,8 @@ if ($argc < 2) {
 }
 $dbPath = $argv[1];
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$outPath = __DIR__ . '/../../output/php-sakila.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$outPath = __DIR__ . '/../output/php-sakila.pdf';
 
 const PAGE_WIDTH  = 792.0; // landscape
 const PAGE_HEIGHT = 612.0;

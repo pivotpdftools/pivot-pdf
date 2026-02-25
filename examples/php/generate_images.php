@@ -2,14 +2,14 @@
 /**
  * Image support example — JPEG, PNG, and RGBA PNG with four fit modes.
  *
- * Mirrors: pdf-core/examples/generate_images.rs
+ * Mirrors: examples/rust/generate_images.rs
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_images.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_images.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path        = __DIR__ . '/../../output/php-images.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path        = __DIR__ . '/../output/php-images.pdf';
 $fixturesDir = __DIR__ . '/../../pdf-core/tests/fixtures';
 
 $doc = PdfDocument::create($path);

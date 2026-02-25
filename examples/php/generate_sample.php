@@ -2,14 +2,14 @@
 /**
  * Basic PDF creation example.
  *
- * Mirrors: pdf-core/examples/generate_sample.rs
+ * Mirrors: examples/rust/generate_sample.rs
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_sample.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_sample.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path = __DIR__ . '/../../output/php-sample.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path = __DIR__ . '/../output/php-sample.pdf';
 
 $doc = PdfDocument::create($path);
 $doc->setCompression(true);

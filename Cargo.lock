@@ -894,8 +894,15 @@ version = "0.1.0"
 dependencies = [
  "flate2",
  "png",
- "rusqlite",
  "ttf-parser",
+]
+
+[[package]]
+name = "pdf-examples"
+version = "0.1.0"
+dependencies = [
+ "pdf-core",
+ "rusqlite",
 ]
 
 [[package]]

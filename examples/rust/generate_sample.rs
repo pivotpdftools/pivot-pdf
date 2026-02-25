@@ -1,8 +1,8 @@
 use pdf_core::PdfDocument;
 
 fn main() {
-    std::fs::create_dir_all("output").unwrap();
-    let path = "output/rust-sample.pdf";
+    std::fs::create_dir_all("examples/output").unwrap();
+    let path = "examples/output/rust-sample.pdf";
     let mut doc = PdfDocument::create(path).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");

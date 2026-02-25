@@ -644,3 +644,43 @@ The result should build a pdf table. Make sure to use a database cursor to fetch
 complete
 
 ---
+
+# Issue 18: Separate Examples from Core
+## Description
+When we implmeneted Issue 17, it was necessary to introduce a sqlite crate dependency into the core. This causes clutter in the core dependencies and will only continue to worsen.
+The solution is to restructure such that examples are separate from pdf-core, pdf-php, etc.
+
+```
+pivot-pdf/
+├── pdf-core/          # Core library — all PDF generation logic
+│   ├── src/
+│   └── tests/
+├── pdf-php/           # PHP extension wrapping pdf-core
+│   ├── src/
+│   └── tests/
+├── docs/              # Architecture and feature documentation
+|── examples/
+│   ├── rust/
+│   ├── php/
+|   └── output/        # Generated PDFs (git-ignored)
+```
+
+This issue will be considered done when:
+- All rust and php exmaple programs are moved into the new examples directory
+- The `rusqlite` dependency is removed from pdf-core
+- The README.md is updated accordingly
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `examples/Cargo.toml` workspace member (depends on pdf-core, rusqlite)
+- [x] Task 3: Add `"examples"` to workspace root `Cargo.toml` members
+- [x] Task 4: Move Rust examples from `pdf-core/examples/` to `examples/rust/` (update output paths)
+- [x] Task 5: Move PHP examples from `pdf-php/examples/` to `examples/php/` (update output paths)
+- [x] Task 6: Remove `rusqlite` from `pdf-core/Cargo.toml` dev-dependencies
+- [x] Task 7: Create `examples/output/.gitkeep`
+- [x] Task 8: Update `.gitignore` to use `examples/output/*.pdf`
+- [x] Task 9: Update README.md (commands, workspace structure)
+- [x] Task 10: Delete old `pdf-core/examples/` and `pdf-php/examples/` directories
+
+## Status
+complete

@@ -2,7 +2,7 @@
 /**
  * Page numbering example using openPage().
  *
- * Mirrors: pdf-core/examples/generate_page_numbers.rs
+ * Mirrors: examples/rust/generate_page_numbers.rs
  *
  * Demonstrates the "Page X of Y" pattern where the total page count is
  * unknown until all pages have been written:
@@ -12,11 +12,11 @@
  * 3. Loop back over pages using openPage(i) to add footer overlays.
  *
  * Run with:
- *   php -d extension=target/release/libpdf_php.so pdf-php/examples/generate_page_numbers.php
+ *   php -d extension=target/release/libpdf_php.so examples/php/generate_page_numbers.php
  */
 
-@mkdir(__DIR__ . '/../../output', 0755, true);
-$path = __DIR__ . '/../../output/php-page-numbers.pdf';
+@mkdir(__DIR__ . '/../output', 0755, true);
+$path = __DIR__ . '/../output/php-page-numbers.pdf';
 
 $doc = PdfDocument::create($path);
 $doc->setCompression(true);

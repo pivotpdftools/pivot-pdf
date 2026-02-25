@@ -2,4 +2,4 @@
 /target/
 
 # Generated example output files
-/output/*.pdf
+/examples/output/*.pdf
