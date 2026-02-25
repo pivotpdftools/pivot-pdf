@@ -50,13 +50,22 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "RUSTFLAGS=-C link-arg=-undefined -C link-arg=dynamic_lookup" >> $GITHUB_ENV
 
-      # Windows: ext-php-rs needs PHP_BUILD_DIR since there is no php-config binary
-      - name: Set PHP_BUILD_DIR (Windows)
+      # Windows: ext-php-rs links against php*.lib at build time (no dynamic_lookup on MSVC).
+      # The PHP binary directory only has php.exe; headers and .lib live in the dev pack.
+      - name: Download PHP dev pack (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $phpDir = php -r "echo dirname(PHP_BINARY);"
-          echo "PHP_BUILD_DIR=$phpDir" >> $env:GITHUB_ENV
+          $version = php -r "echo PHP_VERSION;"
+          $minor = [int](php -r "echo PHP_MINOR_VERSION;")
+          # PHP 8.4+ is built with VS17; 8.3 uses VS16
+          $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
+          $url = "https://windows.php.net/downloads/releases/php-devel-pack-$version-nts-Win32-$vs-x64.zip"
+          Write-Host "Downloading PHP dev pack: $url"
+          Invoke-WebRequest -Uri $url -OutFile php-dev.zip
+          Expand-Archive php-dev.zip -DestinationPath C:\php-dev
+          $devDir = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
+          echo "PHP_BUILD_DIR=$devDir" >> $env:GITHUB_ENV
 
       - name: Build pdf-php extension
         run: cargo build --release -p pdf-php
