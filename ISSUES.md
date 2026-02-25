@@ -684,3 +684,100 @@ This issue will be considered done when:
 
 ## Status
 complete
+
+---
+
+# Issue 19: Establish Roadmap
+## Description
+The library is reaching beta phase. It is now important to establish a Roadmap. The purpose of this issue is to fully bake and format a proper roadmap based on my rough thoughts:
+- Create a feature list/matrix which shows what pdf features this library has and does not have. Ex:
+  - [X] Create PDF
+  - [ ] Read PDF
+  - [ ] Extract Fields
+  - [ ] Merge PDF
+  - [X] JPG images
+  - [X] PNG images
+  - [ ] SVG images
+  - [X] Basic Graphics
+  - [ ] Advanced Graphics
+  - [X] True Type Fonts
+  - [X] Built in Fonts
+  - [ ] Forms/Fields
+  - [ ] Hyperlinks
+- Determine which pdf features are most important and which ones might not ever be supported. For example, I doubt we'd ever support multi media.
+- Need more examples:
+  - Fake Invoice
+  - Should all the example output pdf's be added to the git repo?
+- Revisit overflows: need word break for fit flow and table cells
+- Look into creating a benchmark tool/suite
+- Determine language binding priorties
+  - CLI
+  - Python
+  - C#
+  - Java
+  - Go
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `ROADMAP.md` with feature matrix, priorities, language binding roadmap, and example/benchmark plans
+- [x] Task 3: Create follow-up issues in ISSUES.md for actionable roadmap items (word break, fake invoice, benchmark)
+
+## Status
+complete
+
+---
+
+# Issue 20: Word Break / Overflow Handling
+## Description
+Long words (no whitespace) currently overflow TextFlow boxes and table cells without breaking. This affects any content that may contain long tokens such as URLs, file paths, serial numbers, or languages that don't use spaces.
+
+Two behaviors are needed:
+1. **Force-break**: When a word is wider than the box, break it at the character boundary that fits.
+2. **Soft hyphenation (optional)**: Insert a hyphen at the break point for readability.
+
+The fix must be applied consistently to both `fit_textflow` and `fit_row` (table cells), as both share the word-wrap logic.
+
+## Tasks
+
+## Status
+ready
+
+---
+
+# Issue 21: Fake Invoice Example
+## Description
+Create a realistic fake invoice example in both Rust and PHP that demonstrates the library's primary use case. The invoice should include:
+- Company logo (image)
+- Bill-to address block
+- Invoice metadata (date, invoice number, due date)
+- Line items table (description, qty, unit price, total)
+- Subtotal, tax, and total rows
+- Footer with payment terms
+
+The example should use generated/hardcoded data (no external dependencies). Output to `examples/output/rust-invoice.pdf` and `examples/output/php-invoice.pdf`.
+
+## Tasks
+
+## Status
+ready
+
+---
+
+# Issue 22: Benchmark Suite
+## Description
+Create a benchmark suite using Rust's `criterion` crate to measure performance across key scenarios. The benchmarks live in a separate `benches/` directory within `pdf-core`.
+
+Benchmark scenarios:
+- **Throughput**: Documents per second at 10, 100, and 1000 pages of text
+- **Memory**: Peak RSS for a 1000-page streaming document (may require external tooling)
+- **TextFlow**: Words-per-second for large reflow operations
+- **Tables**: Rows-per-second for large streaming tables
+- **Font embedding**: Cost of TrueType embedding at document creation
+
+## Tasks
+
+## Status
+ready
+
+---
+
