@@ -20,11 +20,59 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Linux / macOS: setup-php works correctly; PHP symbols are available at runtime.
       - name: Setup PHP ${{ matrix.php }}
+        if: runner.os != 'Windows'
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
+
+      # Windows: setup-php may install a patch release whose dev pack is not yet published on
+      # windows.php.net. ext-php-rs build.rs calls `php --version` and independently downloads
+      # the matching dev pack — if that version is absent, it silently creates an empty php8.lib
+      # and linking fails with LNK2019 for every PHP Zend symbol.
+      #
+      # Fix: bypass setup-php on Windows. Instead, find the latest patch that has BOTH a PHP
+      # binary zip AND a dev pack on windows.php.net, then install them together. ext-php-rs
+      # detects the installed version and downloads the matching dev pack — which now exists.
+      - name: Setup PHP ${{ matrix.php }} (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $minor = [int]("${{ matrix.php }}".Split('.')[1])
+          $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
+
+          $found = $false
+          for ($p = 40; $p -ge 0 -and -not $found; $p--) {
+            $ver = "${{ matrix.php }}.$p"
+            $phpFile = "php-$ver-nts-Win32-$vs-x64.zip"
+            $devFile = "php-devel-pack-$ver-nts-Win32-$vs-x64.zip"
+            foreach ($base in @(
+              "https://windows.php.net/downloads/releases",
+              "https://windows.php.net/downloads/releases/archives"
+            )) {
+              try {
+                Invoke-WebRequest "$base/$phpFile" -OutFile php.zip -ErrorAction Stop
+                Invoke-WebRequest "$base/$devFile" -OutFile php-dev.zip -ErrorAction Stop
+                $found = $true
+                Write-Host "Using PHP $ver"
+                break
+              } catch {}
+            }
+          }
+          if (-not $found) { throw "No PHP ${{ matrix.php }}.* binary + dev pack found on windows.php.net" }
+
+          # PHP binary zip extracts flat (no root subdirectory)
+          New-Item -ItemType Directory -Path C:\php | Out-Null
+          Expand-Archive php.zip -DestinationPath C:\php
+          echo "C:\php" >> $env:GITHUB_PATH
+
+          # Dev pack zip extracts into a single subdirectory (e.g. php-8.3.29-devel-vs16-x64)
+          New-Item -ItemType Directory -Path C:\php-dev | Out-Null
+          Expand-Archive php-dev.zip -DestinationPath C:\php-dev
+          $devDir = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
+          echo "PHP_BUILD_DIR=$devDir" >> $env:GITHUB_ENV
 
       - name: Install Rust (stable)
         if: runner.os != 'Windows'
@@ -49,51 +97,6 @@ jobs:
       - name: Set macOS linker flags
         if: runner.os == 'macOS'
         run: echo "RUSTFLAGS=-C link-arg=-undefined -C link-arg=dynamic_lookup" >> $GITHUB_ENV
-
-      # Windows: ext-php-rs links against php*.lib at build time (no dynamic_lookup on MSVC).
-      # The PHP binary directory only has php.exe; headers and .lib live in the dev pack.
-      # windows.php.net only keeps the latest patch in /releases/; older patches move to
-      # /releases/archives/ — so we try both before failing.
-      - name: Download PHP dev pack (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $major = [int](php -r "echo PHP_MAJOR_VERSION;")
-          $minor = [int](php -r "echo PHP_MINOR_VERSION;")
-          $patch = [int](php -r "echo PHP_RELEASE_VERSION;")
-          $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
-          $installedVer = "$major.$minor.$patch"
-
-          # ext-php-rs build.rs looks for PHP_BUILD_DIR\php-{version}-devel-{vs}-x64\ and
-          # skips its own download when it finds that directory. We download the closest
-          # available dev pack (setup-php may install a patch not yet published as a dev pack)
-          # and rename it to match the installed version so ext-php-rs finds it without
-          # attempting to download a potentially unavailable version from windows.php.net.
-          $downloaded = $false
-          for ($p = $patch; $p -ge 0 -and -not $downloaded; $p--) {
-            $file = "php-devel-pack-$major.$minor.$p-nts-Win32-$vs-x64.zip"
-            foreach ($base in @("releases", "releases/archives")) {
-              $url = "https://windows.php.net/downloads/$base/$file"
-              Write-Host "Trying: $url"
-              try {
-                Invoke-WebRequest -Uri $url -OutFile php-dev.zip -ErrorAction Stop
-                $downloaded = $true
-                break
-              } catch {
-                Write-Host "Not found."
-              }
-            }
-          }
-          if (-not $downloaded) { throw "Could not find a PHP dev pack for $major.$minor.*" }
-          Expand-Archive php-dev.zip -DestinationPath C:\php-dev
-          $extracted = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
-          $target = "C:\php-dev\php-$installedVer-devel-$vs-x64"
-          if ($extracted -ne $target) {
-            Write-Host "Renaming $extracted -> $target"
-            Rename-Item $extracted $target
-          }
-          # PHP_BUILD_DIR = parent dir; ext-php-rs looks for php-{version}-devel-{vs}-x64 inside it
-          echo "PHP_BUILD_DIR=C:\php-dev" >> $env:GITHUB_ENV
 
       - name: Build pdf-php extension
         run: cargo build --release -p pdf-php
