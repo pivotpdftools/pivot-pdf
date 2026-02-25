@@ -1,3 +1,4 @@
+#![cfg_attr(windows, feature(abi_vectorcall))]
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
