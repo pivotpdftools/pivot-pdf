@@ -52,6 +52,8 @@ jobs:
 
       # Windows: ext-php-rs links against php*.lib at build time (no dynamic_lookup on MSVC).
       # The PHP binary directory only has php.exe; headers and .lib live in the dev pack.
+      # windows.php.net only keeps the latest patch in /releases/; older patches move to
+      # /releases/archives/ — so we try both before failing.
       - name: Download PHP dev pack (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -60,9 +62,23 @@ jobs:
           $minor = [int](php -r "echo PHP_MINOR_VERSION;")
           # PHP 8.4+ is built with VS17; 8.3 uses VS16
           $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
-          $url = "https://windows.php.net/downloads/releases/php-devel-pack-$version-nts-Win32-$vs-x64.zip"
-          Write-Host "Downloading PHP dev pack: $url"
-          Invoke-WebRequest -Uri $url -OutFile php-dev.zip
+          $file = "php-devel-pack-$version-nts-Win32-$vs-x64.zip"
+          $urls = @(
+            "https://windows.php.net/downloads/releases/$file",
+            "https://windows.php.net/downloads/releases/archives/$file"
+          )
+          $downloaded = $false
+          foreach ($url in $urls) {
+            Write-Host "Trying: $url"
+            try {
+              Invoke-WebRequest -Uri $url -OutFile php-dev.zip -ErrorAction Stop
+              $downloaded = $true
+              break
+            } catch {
+              Write-Host "Not found, trying next..."
+            }
+          }
+          if (-not $downloaded) { throw "Could not download PHP dev pack for $version" }
           Expand-Archive php-dev.zip -DestinationPath C:\php-dev
           $devDir = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
           echo "PHP_BUILD_DIR=$devDir" >> $env:GITHUB_ENV
