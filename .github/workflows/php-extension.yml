@@ -61,10 +61,14 @@ jobs:
           $major = [int](php -r "echo PHP_MAJOR_VERSION;")
           $minor = [int](php -r "echo PHP_MINOR_VERSION;")
           $patch = [int](php -r "echo PHP_RELEASE_VERSION;")
-          # PHP 8.4+ is built with VS17; 8.3 uses VS16
           $vs = if ($minor -ge 4) { "vs17" } else { "vs16" }
-          # setup-php may install a patch newer than what windows.php.net has published.
-          # Walk downward from the installed patch until a dev pack is found.
+          $installedVer = "$major.$minor.$patch"
+
+          # ext-php-rs build.rs looks for PHP_BUILD_DIR\php-{version}-devel-{vs}-x64\ and
+          # skips its own download when it finds that directory. We download the closest
+          # available dev pack (setup-php may install a patch not yet published as a dev pack)
+          # and rename it to match the installed version so ext-php-rs finds it without
+          # attempting to download a potentially unavailable version from windows.php.net.
           $downloaded = $false
           for ($p = $patch; $p -ge 0 -and -not $downloaded; $p--) {
             $file = "php-devel-pack-$major.$minor.$p-nts-Win32-$vs-x64.zip"
@@ -82,8 +86,14 @@ jobs:
           }
           if (-not $downloaded) { throw "Could not find a PHP dev pack for $major.$minor.*" }
           Expand-Archive php-dev.zip -DestinationPath C:\php-dev
-          $devDir = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
-          echo "PHP_BUILD_DIR=$devDir" >> $env:GITHUB_ENV
+          $extracted = (Get-ChildItem C:\php-dev -Directory | Select-Object -First 1).FullName
+          $target = "C:\php-dev\php-$installedVer-devel-$vs-x64"
+          if ($extracted -ne $target) {
+            Write-Host "Renaming $extracted -> $target"
+            Rename-Item $extracted $target
+          }
+          # PHP_BUILD_DIR = parent dir; ext-php-rs looks for php-{version}-devel-{vs}-x64 inside it
+          echo "PHP_BUILD_DIR=C:\php-dev" >> $env:GITHUB_ENV
 
       - name: Build pdf-php extension
         run: cargo build --release -p pdf-php
