@@ -601,3 +601,46 @@ The current `README.md` contains a few commands for reference. We are getting re
 complete
 
 ---
+
+# Issue 17: Create a large PDF using sakila database
+## Description
+Create examples for rust and php which open a path to the sakila sqlite db. The path to the db file will be provided on the cli by the user.
+
+Query to run (produces 3475 rows):
+```sql
+select 
+r.rental_id,
+r.rental_date,
+f.title,
+f.description,
+f.release_year,
+f.rating,
+cat.name as "category",
+f."length" as "film length",
+c.first_name,
+c.last_name,
+c.email,
+a.address,
+cty.city,
+a.postal_code
+from rental r 
+join customer c on r.customer_id = c.customer_id 
+join address a on c.address_id = a.address_id 
+join city cty on cty.city_id = a.city_id 
+join film f on r.inventory_id = f.film_id
+join film_category fc on f.film_id = fc.film_id 
+join category cat on fc.category_id = cat.category_id 
+```
+
+The result should build a pdf table. Make sure to use a database cursor to fetch the data and use fit_row to build the table on as many pages as are needed. Repeat the table header on each new page. Use page numbers (Page x of y) in the lower left corner of each page.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `rusqlite` to `[dev-dependencies]` in `pdf-core/Cargo.toml`
+- [x] Task 3: Create `pdf-core/examples/generate_sakila.rs` (landscape table, streaming rows, page numbers)
+- [x] Task 4: Create `pdf-php/examples/generate_sakila.php` (mirrors Rust example using PDO SQLite)
+
+## Status
+complete
+
+---

@@ -673,7 +673,12 @@ fn render_cell(
 }
 
 /// Reduce font size by 0.5pt steps until the text fits within the available
-/// height, stopping at a minimum of 4pt.
+/// dimensions, stopping at a minimum of 4pt.
+///
+/// Two conditions must both be satisfied for the text to "fit":
+/// - HEIGHT: wrapped line count × line height ≤ avail_height
+/// - WIDTH: every individual word ≤ avail_width (words cannot be broken,
+///   so a word wider than the column can never wrap to fit — only shrinking helps)
 fn shrink_font_size(
     text: &str,
     font: FontRef,
@@ -690,7 +695,9 @@ fn shrink_font_size(
         let ts = TextStyle { font, font_size };
         let lh = line_height_for(&ts, tt_fonts);
         let lines = count_lines(text, avail_width, &ts, tt_fonts);
-        if lines as f64 * lh <= avail_height || font_size <= MIN_FONT_SIZE {
+        let fits_height = lines as f64 * lh <= avail_height;
+        let fits_width = text.split_whitespace().all(|w| measure_word(w, &ts, tt_fonts) <= avail_width);
+        if (fits_height && fits_width) || font_size <= MIN_FONT_SIZE {
             break;
         }
         font_size = (font_size - STEP).max(MIN_FONT_SIZE);

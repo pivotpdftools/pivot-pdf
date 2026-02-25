@@ -436,6 +436,30 @@ fn shrink_mode_with_fixed_row_height() {
 }
 
 #[test]
+fn shrink_mode_shrinks_wide_single_word() {
+    // "WWWWWW" at 14pt Helvetica is ~60pt wide but the column avail_width is 44pt
+    // (col_width 52 - 2×4 padding). No spaces means word wrapping cannot help —
+    // only font shrinking can make it fit. Before the fix, shrink_font_size only
+    // checked height, so the font was left at 14pt and the word overflowed.
+    let style = CellStyle {
+        overflow: CellOverflow::Shrink,
+        font_size: 14.0,
+        ..CellStyle::default()
+    };
+    let row = Row::new(vec![Cell::styled("WWWWWW", style)]);
+
+    let table = Table::new(vec![52.0]);
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert!(!contains(&bytes, b"14 Tf"), "font should have been shrunk below 14pt");
+}
+
+#[test]
 fn wrap_mode_row_height_accounts_for_wrapped_lines() {
     // Narrow column forces multi-line text; verify Td operators show multiple lines
     let text = "alpha beta gamma delta epsilon zeta eta theta iota kappa";
