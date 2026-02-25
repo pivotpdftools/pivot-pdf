@@ -1,0 +1,94 @@
+name: PHP Extension Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: PHP ${{ matrix.php }} / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        php: ['8.3', '8.4', '8.5']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Windows: ext-php-rs needs PHP_BUILD_DIR since there is no php-config binary
+      - name: Set PHP_BUILD_DIR (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $phpDir = php -r "echo dirname(PHP_BINARY);"
+          echo "PHP_BUILD_DIR=$phpDir" >> $env:GITHUB_ENV
+
+      - name: Build pdf-php extension
+        run: cargo build --release -p pdf-php
+
+      - name: Stage artifact (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          VER=$(php -r "echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;")
+          cp target/release/libpdf_php.so "pdf_php-linux-php${VER}.so"
+
+      - name: Stage artifact (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          VER=$(php -r "echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;")
+          cp target/release/libpdf_php.dylib "pdf_php-macos-php${VER}.so"
+
+      - name: Stage artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Ver = php -r "echo PHP_MAJOR_VERSION . PHP_MINOR_VERSION;"
+          Copy-Item target\release\pdf_php.dll "pdf_php-windows-php${Ver}.dll"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-php-${{ runner.os }}-php${{ matrix.php }}
+          path: pdf_php-*
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

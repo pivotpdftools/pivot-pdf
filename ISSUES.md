@@ -781,3 +781,17 @@ ready
 
 ---
 
+# Issue 23: PHP extension artifacts
+## Description
+We have a basic build action defined in `/.github/workflows/rust.yml`. We need steps which will produce artifacts as part of the github repository for the php extension for linux, windows, and macos. This should be triggered when a new git tag is created. We also need to generate the extensions for php 8.3 - 8.5.
+Determine whether the existing rust.yml file should be modified or whether a better course of action is warranted.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with tasks and set status to in-progress
+- [x] Task 2: Fix `rust.yml` — add `shivammathur/setup-php@v2` (PHP 8.3) before the build step
+- [x] Task 3: Create `.github/workflows/php-extension.yml` with build matrix (3 OS × 3 PHP) and release job
+
+## Status
+complete
+
+---
