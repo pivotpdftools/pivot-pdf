@@ -19,13 +19,14 @@ use pdf_core::{
 /// $red = new Color(1.0, 0.0, 0.0);
 /// $gray = Color::gray(0.5);
 /// ```
-#[php_class(name = "Color")]
+#[php_class]
+#[php(name = "Color")]
 pub struct PhpColor {
-    #[prop]
+    #[php(prop)]
     pub r: f64,
-    #[prop]
+    #[php(prop)]
     pub g: f64,
-    #[prop]
+    #[php(prop)]
     pub b: f64,
 }
 
@@ -66,14 +67,15 @@ impl PhpColor {
 /// $handle = $doc->loadFontFile("fonts/Roboto.ttf");
 /// $style = TextStyle::truetype($handle, 12.0);
 /// ```
-#[php_class(name = "TextStyle")]
+#[php_class]
+#[php(name = "TextStyle")]
 pub struct PhpTextStyle {
-    #[prop]
+    #[php(prop)]
     pub font_name: String,
-    #[prop]
+    #[php(prop)]
     pub font_size: f64,
     /// -1 means builtin (use font_name), >= 0 means TrueType
-    #[prop]
+    #[php(prop)]
     pub font_handle: i64,
 }
 
@@ -137,15 +139,16 @@ impl PhpTextStyle {
 /// ```php
 /// $rect = new Rect(72.0, 720.0, 468.0, 648.0);
 /// ```
-#[php_class(name = "Rect")]
+#[php_class]
+#[php(name = "Rect")]
 pub struct PhpRect {
-    #[prop]
+    #[php(prop)]
     pub x: f64,
-    #[prop]
+    #[php(prop)]
     pub y: f64,
-    #[prop]
+    #[php(prop)]
     pub width: f64,
-    #[prop]
+    #[php(prop)]
     pub height: f64,
 }
 
@@ -183,7 +186,8 @@ impl PhpRect {
 /// $tf->addText("Hello ", new TextStyle());
 /// $tf->addText("Bold", new TextStyle("Helvetica-Bold"));
 /// ```
-#[php_class(name = "TextFlow")]
+#[php_class]
+#[php(name = "TextFlow")]
 pub struct PhpTextFlow {
     inner: TextFlow,
 }
@@ -220,18 +224,19 @@ impl PhpTextFlow {
 /// $header->textColor = new Color(1.0, 1.0, 1.0);
 /// $header->overflow = 'wrap'; // 'wrap', 'clip', or 'shrink'
 /// ```
-#[php_class(name = "CellStyle")]
+#[php_class]
+#[php(name = "CellStyle")]
 pub struct PhpCellStyle {
-    #[prop]
+    #[php(prop)]
     pub font_name: String,
-    #[prop]
+    #[php(prop)]
     pub font_handle: i64,
-    #[prop]
+    #[php(prop)]
     pub font_size: f64,
-    #[prop]
+    #[php(prop)]
     pub padding: f64,
     /// Overflow mode: "wrap", "clip", or "shrink"
-    #[prop]
+    #[php(prop)]
     pub overflow: String,
     /// Background color (null = none)
     pub background_color: Option<Color>,
@@ -302,7 +307,8 @@ impl PhpCellStyle {
 /// $cell = new Cell("Hello");
 /// $cell = Cell::styled("Bold", $style);
 /// ```
-#[php_class(name = "Cell")]
+#[php_class]
+#[php(name = "Cell")]
 pub struct PhpCell {
     text: String,
     style: Option<CellStyle>,
@@ -346,11 +352,12 @@ impl PhpCell {
 /// $row->setBackgroundColor(new Color(0.9, 0.9, 0.9));
 /// $row->height = 20.0; // optional fixed height
 /// ```
-#[php_class(name = "Row")]
+#[php_class]
+#[php(name = "Row")]
 pub struct PhpRow {
     cells: Vec<Cell>,
     background_color: Option<Color>,
-    #[prop]
+    #[php(prop)]
     pub height: Option<f64>,
 }
 
@@ -414,7 +421,8 @@ impl PhpRow {
 ///     }
 /// }
 /// ```
-#[php_class(name = "Table")]
+#[php_class]
+#[php(name = "Table")]
 pub struct PhpTable {
     inner: Table,
 }
@@ -457,7 +465,8 @@ impl PhpTable {
 ///     $doc->fitRow($table, $headerRow, $cursor);
 /// }
 /// ```
-#[php_class(name = "TableCursor")]
+#[php_class]
+#[php(name = "TableCursor")]
 pub struct PhpTableCursor {
     inner: TableCursor,
 }
@@ -514,7 +523,8 @@ macro_rules! with_doc {
 /// $handle = $doc->loadFontFile("fonts/Roboto.ttf");
 /// $style = TextStyle::truetype($handle, 14.0);
 /// ```
-#[php_class(name = "PdfDocument")]
+#[php_class]
+#[php(name = "PdfDocument")]
 pub struct PhpPdfDocument {
     inner: Option<DocumentInner>,
 }
@@ -868,4 +878,14 @@ fn parse_image_fit(s: &str) -> Result<ImageFit, String> {
 #[php_module]
 pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
     module
+        .class::<PhpColor>()
+        .class::<PhpTextStyle>()
+        .class::<PhpRect>()
+        .class::<PhpTextFlow>()
+        .class::<PhpCellStyle>()
+        .class::<PhpCell>()
+        .class::<PhpRow>()
+        .class::<PhpTable>()
+        .class::<PhpTableCursor>()
+        .class::<PhpPdfDocument>()
 }
