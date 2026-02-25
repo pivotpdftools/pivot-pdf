@@ -27,7 +27,13 @@ jobs:
           coverage: none
 
       - name: Install Rust (stable)
+        if: runner.os != 'Windows'
         uses: dtolnay/rust-toolchain@stable
+
+      # ext-php-rs uses #![feature(abi_vectorcall)] on Windows, which requires nightly
+      - name: Install Rust (nightly, Windows)
+        if: runner.os == 'Windows'
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -37,6 +43,12 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+
+      # macOS: PHP symbols are resolved at runtime by the PHP process, not at link time.
+      # Without this flag, ld errors on undefined PHP symbols during the build.
+      - name: Set macOS linker flags
+        if: runner.os == 'macOS'
+        run: echo "RUSTFLAGS=-C link-arg=-undefined -C link-arg=dynamic_lookup" >> $GITHUB_ENV
 
       # Windows: ext-php-rs needs PHP_BUILD_DIR since there is no php-config binary
       - name: Set PHP_BUILD_DIR (Windows)
