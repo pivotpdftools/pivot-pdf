@@ -3,7 +3,11 @@ description: >-
   A PDF creation library written in Rust, designed for SaaS and web applications.
   Low memory and CPU consumption — even for documents with hundreds of pages.
 
-theme: cayman
+baseurl: "/pivot-pdf"
+url: "https://pivotpdftools.github.io"
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+  - jekyll-remote-theme
 
 # Exclude large reference files from Jekyll processing
 exclude:
