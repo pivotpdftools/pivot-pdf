@@ -1,3 +1,8 @@
+---
+layout: default
+title: Edit Page
+---
+
 # Edit Page
 
 ## Purpose

@@ -795,3 +795,18 @@ Determine whether the existing rust.yml file should be modified or whether a bet
 complete
 
 ---
+
+# Issue 24: Create static pages
+## Description
+With the repository up on github, we want to enable github pages. Since we have the `/docs` directory, it would seem natural to just use this. It seems we would need an `/docs/index.md` and a `/docs/_config.yml`. But, let's explore alternatives and options first (such as using jekyll)
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `docs/_config.yml` (Jekyll config, cayman theme, exclude large PDF files)
+- [x] Task 3: Create `docs/index.md` (landing page — overview, features, links to feature docs)
+- [x] Task 4: Add Jekyll front matter to the 6 existing feature docs
+
+## Status
+complete
+
+---

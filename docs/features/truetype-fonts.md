@@ -1,3 +1,8 @@
+---
+layout: default
+title: TrueType Font Embedding
+---
+
 # TrueType Font Embedding
 
 ## Purpose

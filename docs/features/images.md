@@ -1,3 +1,8 @@
+---
+layout: default
+title: Image Support (JPEG + PNG)
+---
+
 # Image Support (JPEG + PNG)
 
 ## Purpose

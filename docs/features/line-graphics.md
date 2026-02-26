@@ -1,3 +1,8 @@
+---
+layout: default
+title: Line Graphics
+---
+
 # Line Graphics
 
 ## Purpose

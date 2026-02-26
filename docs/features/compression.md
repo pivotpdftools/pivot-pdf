@@ -1,3 +1,8 @@
+---
+layout: default
+title: Stream Compression
+---
+
 # Stream Compression
 
 ## Purpose

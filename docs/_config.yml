@@ -1,0 +1,11 @@
+title: Pivot PDF
+description: >-
+  A PDF creation library written in Rust, designed for SaaS and web applications.
+  Low memory and CPU consumption — even for documents with hundreds of pages.
+
+theme: cayman
+
+# Exclude large reference files from Jekyll processing
+exclude:
+  - PDF32000_2008.pdf
+  - pdf-reference-curated.md
