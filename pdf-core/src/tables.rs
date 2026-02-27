@@ -11,6 +11,18 @@ use crate::writer::escape_pdf_string;
 // Public types
 // -------------------------------------------------------
 
+/// Horizontal text alignment within a table cell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextAlign {
+    /// Text is left-aligned within the cell (default).
+    #[default]
+    Left,
+    /// Text is centered within the cell.
+    Center,
+    /// Text is right-aligned within the cell.
+    Right,
+}
+
 /// How text that overflows the cell height is handled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CellOverflow {
@@ -39,6 +51,8 @@ pub struct CellStyle {
     pub overflow: CellOverflow,
     /// How to handle words wider than the cell's available width.
     pub word_break: WordBreak,
+    /// Horizontal text alignment within the cell.
+    pub text_align: TextAlign,
 }
 
 impl Default for CellStyle {
@@ -51,6 +65,7 @@ impl Default for CellStyle {
             padding: 4.0,
             overflow: CellOverflow::Wrap,
             word_break: WordBreak::BreakAll,
+            text_align: TextAlign::Left,
         }
     }
 }
@@ -668,6 +683,30 @@ fn draw_row_borders(
     output.extend_from_slice(b"Q\n");
 }
 
+/// Compute the x coordinate for a line of text within a cell based on alignment.
+fn aligned_x(
+    line: &str,
+    align: TextAlign,
+    cell_x: f64,
+    col_width: f64,
+    padding: f64,
+    ts: &TextStyle,
+    tt_fonts: &[TrueTypeFont],
+) -> f64 {
+    match align {
+        TextAlign::Left => cell_x + padding,
+        TextAlign::Right => {
+            let line_w = measure_word(line, ts, tt_fonts);
+            cell_x + col_width - padding - line_w
+        }
+        TextAlign::Center => {
+            let avail = col_width - 2.0 * padding;
+            let line_w = measure_word(line, ts, tt_fonts);
+            cell_x + padding + (avail - line_w).max(0.0) / 2.0
+        }
+    }
+}
+
 /// Render the text content of a single cell.
 ///
 /// Wraps each cell in `q/Q` to isolate graphics state. Applies clip region
@@ -725,7 +764,6 @@ fn render_cell(
         );
     }
 
-    let text_x = cell_x + style.padding;
     // Baseline: top of cell minus top padding minus font size (approximates ascent)
     let first_line_y = row_top - style.padding - effective_font_size;
 
@@ -751,23 +789,23 @@ fn render_cell(
     );
     record_font(&ts.font, used);
 
-    output.extend_from_slice(
-        format!(
-            "{} {} Td\n",
-            format_coord(text_x),
-            format_coord(first_line_y),
-        )
-        .as_bytes(),
-    );
+    let align = style.text_align;
+    let mut current_x = cell_x + style.padding; // placeholder; overwritten on first line
 
-    let mut is_first = true;
-    for line in &lines {
-        if !is_first {
-            output
-                .extend_from_slice(format!("0 {} Td\n", format_coord(-lh)).as_bytes());
+    for (i, line) in lines.iter().enumerate() {
+        let line_x = aligned_x(line, align, cell_x, col_width, style.padding, &ts, tt_fonts);
+        if i == 0 {
+            output.extend_from_slice(
+                format!("{} {} Td\n", format_coord(line_x), format_coord(first_line_y)).as_bytes(),
+            );
+        } else {
+            let dx = line_x - current_x;
+            output.extend_from_slice(
+                format!("{} {} Td\n", format_coord(dx), format_coord(-lh)).as_bytes(),
+            );
         }
+        current_x = line_x;
         emit_cell_text(line, ts.font, tt_fonts, output);
-        is_first = false;
     }
 
     output.extend_from_slice(b"ET\n");

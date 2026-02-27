@@ -26,8 +26,8 @@ $names       = [
 
 // Header style: bold white text on dark background
 $headerStyle = new CellStyle();
-$headerStyle->font_name = "Helvetica-Bold";
-$headerStyle->font_size = 9.0;
+$headerStyle->fontName = "Helvetica-Bold";
+$headerStyle->fontSize = 9.0;
 $headerStyle->padding   = 5.0;
 
 $headerBgColor = new Color(0.2, 0.3, 0.5);

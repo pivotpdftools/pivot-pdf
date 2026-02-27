@@ -6,7 +6,8 @@ use ext_php_rs::types::{Zval};
 
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, ImageFit, ImageId,
-    PdfDocument, Rect, Row, Table, TableCursor, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
+    PdfDocument, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId,
+    WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -247,6 +248,9 @@ pub struct PhpCellStyle {
     /// Word break mode: "break" (default), "hyphenate", or "normal"
     #[php(prop)]
     pub word_break: String,
+    /// Text alignment: "left" (default), "center", or "right"
+    #[php(prop)]
+    pub text_align: String,
     /// Background color (null = none)
     pub background_color: Option<Color>,
     /// Text color (null = default black)
@@ -263,6 +267,7 @@ impl PhpCellStyle {
             padding: 4.0,
             overflow: "wrap".to_string(),
             word_break: "break".to_string(),
+            text_align: "left".to_string(),
             background_color: None,
             text_color: None,
         }
@@ -276,6 +281,30 @@ impl PhpCellStyle {
     /// Set text color (pass null to use default black).
     pub fn set_text_color(&mut self, color: Option<&PhpColor>) {
         self.text_color = color.map(|c| c.to_core());
+    }
+
+    /// Return a copy of this style as a new CellStyle instance.
+    ///
+    /// PHP's native `clone` operator does not work on extension objects because
+    /// it bypasses the Rust constructor, leaving the internal struct
+    /// uninitialized. Use this method instead:
+    ///
+    /// ```php
+    /// $right = $base->clone();
+    /// $right->textAlign = 'right';
+    /// ```
+    pub fn clone(&self) -> Self {
+        PhpCellStyle {
+            font_name: self.font_name.clone(),
+            font_handle: self.font_handle,
+            font_size: self.font_size,
+            padding: self.padding,
+            overflow: self.overflow.clone(),
+            word_break: self.word_break.clone(),
+            text_align: self.text_align.clone(),
+            background_color: self.background_color,
+            text_color: self.text_color,
+        }
     }
 }
 
@@ -302,6 +331,12 @@ impl PhpCellStyle {
             _ => WordBreak::BreakAll,
         };
 
+        let text_align = match self.text_align.as_str() {
+            "center" => TextAlign::Center,
+            "right" => TextAlign::Right,
+            _ => TextAlign::Left,
+        };
+
         Ok(CellStyle {
             background_color: self.background_color,
             text_color: self.text_color,
@@ -310,6 +345,7 @@ impl PhpCellStyle {
             padding: self.padding,
             overflow,
             word_break,
+            text_align,
         })
     }
 }

@@ -68,8 +68,8 @@ $sql = "
 
 // --- Build header row ---
 $headerStyle = new CellStyle();
-$headerStyle->font_name = 'Helvetica-Bold';
-$headerStyle->font_size = 7.0;
+$headerStyle->fontName = 'Helvetica-Bold';
+$headerStyle->fontSize = 7.0;
 $headerStyle->padding   = 3.0;
 $headerBg   = new Color(0.2, 0.3, 0.5);
 $headerFg   = new Color(1.0, 1.0, 1.0);
@@ -103,22 +103,22 @@ $footerStyle = new TextStyle('Helvetica', 8.0);
 $tableRect = new Rect($tableX, $tableTop, $tableWidth, $tableHeight);
 
 $cellStyle = new CellStyle();
-$cellStyle->font_name = 'Helvetica';
-$cellStyle->font_size = 7.0;
+$cellStyle->fontName = 'Helvetica';
+$cellStyle->fontSize = 7.0;
 $cellStyle->padding   = 3.0;
 
 // Last names are single words that can't wrap; shrink the font to fit.
 $lastNameStyle = new CellStyle();
-$lastNameStyle->font_name = 'Helvetica';
-$lastNameStyle->font_size = 7.0;
+$lastNameStyle->fontName = 'Helvetica';
+$lastNameStyle->fontSize = 7.0;
 $lastNameStyle->padding   = 3.0;
 $lastNameStyle->overflow  = 'shrink';
 
 // Email addresses have no word-break characters so they can't wrap.
 // Clip prevents them from visually overflowing into adjacent columns.
 $emailStyle = new CellStyle();
-$emailStyle->font_name = 'Helvetica';
-$emailStyle->font_size = 7.0;
+$emailStyle->fontName = 'Helvetica';
+$emailStyle->fontSize = 7.0;
 $emailStyle->padding   = 3.0;
 $emailStyle->overflow  = 'clip';
 

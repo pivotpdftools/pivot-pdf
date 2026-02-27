@@ -9,7 +9,7 @@
 /// Opens output at: examples/output/rust-invoice.pdf
 use pdf_core::{
     BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
-    TableCursor, TextStyle,
+    TableCursor, TextAlign, TextStyle,
 };
 
 const PAGE_W: f64 = 612.0;
@@ -181,7 +181,7 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
     let rect = Rect { x: MARGIN, y: 638.0, width: 468.0, height: 420.0 };
     let mut cursor = TableCursor::new(&rect);
 
-    // Header row
+    // Header row — Qty, Unit Price, Total are right-aligned to match data columns.
     let hs = CellStyle {
         background_color: Some(navy()),
         text_color: Some(Color::rgb(1.0, 1.0, 1.0)),
@@ -190,15 +190,16 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
         padding: 5.0,
         ..CellStyle::default()
     };
+    let hs_right = CellStyle { text_align: TextAlign::Right, ..hs.clone() };
     let header = Row::new(vec![
-        Cell::styled("DESCRIPTION", hs.clone()),
-        Cell::styled("QTY",         hs.clone()),
-        Cell::styled("UNIT PRICE",  hs.clone()),
-        Cell::styled("TOTAL",       hs),
+        Cell::styled("DESCRIPTION", hs),
+        Cell::styled("QTY",         hs_right.clone()),
+        Cell::styled("UNIT PRICE",  hs_right.clone()),
+        Cell::styled("TOTAL",       hs_right),
     ]);
     doc.fit_row(&table, &header, &mut cursor).expect("fit_row header");
 
-    // Data rows with alternating background
+    // Data rows — description is left-aligned; numeric columns are right-aligned.
     for (i, item) in ITEMS.iter().enumerate() {
         let ds = CellStyle {
             background_color: if i % 2 == 0 { Some(stripe_bg()) } else { None },
@@ -207,11 +208,12 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
             padding: 5.0,
             ..CellStyle::default()
         };
+        let ds_right = CellStyle { text_align: TextAlign::Right, ..ds.clone() };
         let row = Row::new(vec![
-            Cell::styled(item.description,            ds.clone()),
-            Cell::styled(&item.qty.to_string(),       ds.clone()),
-            Cell::styled(&fmt_money(item.unit_price), ds.clone()),
-            Cell::styled(&fmt_money(item.total()),    ds),
+            Cell::styled(item.description,            ds),
+            Cell::styled(&item.qty.to_string(),       ds_right.clone()),
+            Cell::styled(&fmt_money(item.unit_price), ds_right.clone()),
+            Cell::styled(&fmt_money(item.total()),    ds_right),
         ]);
         match doc.fit_row(&table, &row, &mut cursor).expect("fit_row item") {
             FitResult::BoxFull | FitResult::BoxEmpty => {
@@ -227,67 +229,75 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
 
 // ── totals section ────────────────────────────────────────────────────────────
 
-/// `table_bottom` is `cursor.current_y()` from `draw_line_items` — the exact
-/// Y below the last table row. All positions are computed from this value so
-/// the totals section tracks the table regardless of how many rows were placed.
+/// Renders subtotal, tax, and total using a borderless table so amounts are
+/// properly right-aligned flush with the items table's TOTAL column.
+///
+/// `table_bottom` is `cursor.current_y()` from `draw_line_items`.
 fn draw_totals<W: std::io::Write>(doc: &mut PdfDocument<W>, table_bottom: f64) {
     let subtotal: f64 = ITEMS.iter().map(|i| i.total()).sum();
     let tax_rate = 0.08_f64;
     let tax = subtotal * tax_rate;
     let total = subtotal + tax;
 
-    // Reset fill color to black — the table may have left a background color
-    // as the active fill, which would render plain text invisible.
-    doc.set_fill_color(Color::rgb(0.0, 0.0, 0.0));
+    // Borderless 2-column table: label (100pt) + amount (78pt) = 178pt.
+    // x=362 to x=540 — amount column aligns exactly with the TOTAL column above.
+    let mut totals_table = Table::new(vec![100.0, 78.0]);
+    totals_table.border_width = 0.0;
 
-    let lx = 362.0; // label column x
-    let vx = 462.0; // value column x
-
-    // Layout constants (all relative to table_bottom)
-    let sep_y      = table_bottom - 10.0; // light separator, 10pt gap below table
-    let subtotal_y = sep_y      - 14.0;   // subtotal row baseline
-    let tax_y      = subtotal_y - 14.0;   // tax row baseline
-    let rule_y     = tax_y      - 10.0;   // bold rule above total
-    let total_y    = rule_y     - 14.0;   // total row baseline
-
-    // Light separator
+    // Light separator 10pt below the items table.
+    let sep_y = table_bottom - 10.0;
     doc.save_state();
     doc.set_stroke_color(Color::rgb(0.75, 0.75, 0.75));
     doc.set_line_width(0.5);
-    doc.move_to(lx, sep_y);
+    doc.move_to(362.0, sep_y);
     doc.line_to(RIGHT, sep_y);
     doc.stroke();
     doc.restore_state();
 
-    // Subtotal
-    doc.save_state();
-    doc.set_fill_color(mid_gray());
-    doc.place_text_styled("Subtotal:", lx, subtotal_y, &regular(9.0));
-    doc.restore_state();
-    doc.place_text_styled(&fmt_money(subtotal), vx, subtotal_y, &regular(9.0));
+    let rect = Rect { x: 362.0, y: sep_y, width: 178.0, height: 200.0 };
+    let mut cursor = TableCursor::new(&rect);
 
-    // Tax
-    doc.save_state();
-    doc.set_fill_color(mid_gray());
-    doc.place_text_styled(&format!("Tax ({:.0}%):", tax_rate * 100.0), lx, tax_y, &regular(9.0));
-    doc.restore_state();
-    doc.place_text_styled(&fmt_money(tax), vx, tax_y, &regular(9.0));
+    // Base style: 9pt Helvetica, right-aligned, 5pt padding.
+    // Variants adjust font weight and color.
+    let base = CellStyle {
+        font: FontRef::Builtin(BuiltinFont::Helvetica),
+        font_size: 9.0,
+        padding: 5.0,
+        text_align: TextAlign::Right,
+        ..CellStyle::default()
+    };
+    let gray_label  = CellStyle { text_color: Some(mid_gray()), ..base.clone() };
+    let total_label = CellStyle { font: FontRef::Builtin(BuiltinFont::HelveticaBold), ..base.clone() };
+    let total_amt   = CellStyle {
+        font: FontRef::Builtin(BuiltinFont::HelveticaBold),
+        text_color: Some(navy()),
+        ..base.clone()
+    };
 
-    // Bold rule above the total line
+    doc.fit_row(&totals_table, &Row::new(vec![
+        Cell::styled("Subtotal:", gray_label.clone()),
+        Cell::styled(&fmt_money(subtotal), base.clone()),
+    ]), &mut cursor).expect("fit_row subtotal");
+
+    doc.fit_row(&totals_table, &Row::new(vec![
+        Cell::styled(&format!("Tax ({:.0}%):", tax_rate * 100.0), gray_label),
+        Cell::styled(&fmt_money(tax), base),
+    ]), &mut cursor).expect("fit_row tax");
+
+    // Bold navy rule between tax and total.
+    let rule_y = cursor.current_y();
     doc.save_state();
     doc.set_stroke_color(navy());
     doc.set_line_width(1.0);
-    doc.move_to(lx, rule_y);
+    doc.move_to(362.0, rule_y);
     doc.line_to(RIGHT, rule_y);
     doc.stroke();
     doc.restore_state();
 
-    // Total (navy bold)
-    doc.place_text_styled("TOTAL:", lx, total_y, &bold(10.0));
-    doc.save_state();
-    doc.set_fill_color(navy());
-    doc.place_text_styled(&fmt_money(total), vx, total_y, &bold(10.0));
-    doc.restore_state();
+    doc.fit_row(&totals_table, &Row::new(vec![
+        Cell::styled("TOTAL:", total_label),
+        Cell::styled(&fmt_money(total), total_amt),
+    ]), &mut cursor).expect("fit_row total");
 }
 
 // ── footer ────────────────────────────────────────────────────────────────────

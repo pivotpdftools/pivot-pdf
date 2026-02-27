@@ -136,36 +136,45 @@ $table->setBorderWidth(0.5);
 $tableRect = new Rect(MARGIN, 638.0, 468.0, 420.0);
 $cursor    = new TableCursor($tableRect);
 
-// Header row
+// Header row — Qty, Unit Price, Total are right-aligned to match data columns.
 $hs = new CellStyle();
-$hs->font_name = 'Helvetica-Bold';
-$hs->font_size = 9.0;
-$hs->padding   = 5.0;
+$hs->fontName = 'Helvetica-Bold';
+$hs->fontSize = 9.0;
+$hs->padding  = 5.0;
 $hs->setBackgroundColor($navy);
 $hs->setTextColor($white);
 
+$hsRight = $hs->clone();
+$hsRight->textAlign = 'right';
+
 $doc->fitRow($table, new Row([
     Cell::styled('DESCRIPTION', $hs),
-    Cell::styled('QTY',         $hs),
-    Cell::styled('UNIT PRICE',  $hs),
-    Cell::styled('TOTAL',       $hs),
+    Cell::styled('QTY',         $hsRight),
+    Cell::styled('UNIT PRICE',  $hsRight),
+    Cell::styled('TOTAL',       $hsRight),
 ]), $cursor);
 
-// Data rows with alternating background
+// Data rows — description left-aligned; numeric columns right-aligned.
 foreach ($lineItems as $i => $item) {
     $ds = new CellStyle();
-    $ds->font_name = 'Helvetica';
-    $ds->font_size = 9.0;
-    $ds->padding   = 5.0;
+    $ds->fontName = 'Helvetica';
+    $ds->fontSize = 9.0;
+    $ds->padding  = 5.0;
     if ($i % 2 === 0) {
         $ds->setBackgroundColor($stripeBg);
     }
 
+    $dsRight = $ds->clone();
+    $dsRight->textAlign = 'right';
+    if ($i % 2 === 0) {
+        $dsRight->setBackgroundColor($stripeBg);
+    }
+
     $row = new Row([
         Cell::styled($item['description'],                         $ds),
-        Cell::styled((string)$item['qty'],                         $ds),
-        Cell::styled(fmtMoney($item['unit_price']),                $ds),
-        Cell::styled(fmtMoney($item['qty'] * $item['unit_price']), $ds),
+        Cell::styled((string)$item['qty'],                         $dsRight),
+        Cell::styled(fmtMoney($item['unit_price']),                $dsRight),
+        Cell::styled(fmtMoney($item['qty'] * $item['unit_price']), $dsRight),
     ]);
 
     $result = $doc->fitRow($table, $row, $cursor);
@@ -184,58 +193,64 @@ $taxRate  = 0.08;
 $tax      = $subtotal * $taxRate;
 $total    = $subtotal + $tax;
 
-// Reset fill color to black — the table may have left a background color
-// as the active fill, which would render plain text invisible.
-$doc->setFillColor($black);
+// Borderless 2-column table: label (100pt) + amount (78pt) = 178pt.
+// x=362 to x=540 — amount column aligns exactly with the TOTAL column above.
+$totalsTable = new Table([100.0, 78.0]);
+$totalsTable->setBorderWidth(0.0);
 
-$lx = 362.0; // label column x
-$vx = 462.0; // value column x
-
-// Layout positions derived from the actual table bottom
-$sepY      = $tableBottom - 10.0; // light separator, 10pt gap below table
-$subtotalY = $sepY        - 14.0; // subtotal row baseline
-$taxY      = $subtotalY   - 14.0; // tax row baseline
-$ruleY     = $taxY        - 10.0; // bold rule above total
-$totalY    = $ruleY       - 14.0; // total row baseline
-
-// Light separator
+// Light separator 10pt below the items table.
+$sepY = $tableBottom - 10.0;
 $doc->saveState();
 $doc->setStrokeColor($ltGray);
 $doc->setLineWidth(0.5);
-$doc->moveTo($lx, $sepY);
+$doc->moveTo(362.0, $sepY);
 $doc->lineTo(RIGHT, $sepY);
 $doc->stroke();
 $doc->restoreState();
 
-// Subtotal
-$doc->saveState();
-$doc->setFillColor($midGray);
-$doc->placeTextStyled('Subtotal:', $lx, $subtotalY, new TextStyle('Helvetica', 9.0));
-$doc->restoreState();
-$doc->placeTextStyled(fmtMoney($subtotal), $vx, $subtotalY, new TextStyle('Helvetica', 9.0));
+$totalsRect   = new Rect(362.0, $sepY, 178.0, 200.0);
+$totalsCursor = new TableCursor($totalsRect);
 
-// Tax
-$doc->saveState();
-$doc->setFillColor($midGray);
-$doc->placeTextStyled(sprintf('Tax (%d%%):', (int)($taxRate * 100)), $lx, $taxY, new TextStyle('Helvetica', 9.0));
-$doc->restoreState();
-$doc->placeTextStyled(fmtMoney($tax), $vx, $taxY, new TextStyle('Helvetica', 9.0));
+// Base style: 9pt Helvetica, right-aligned, 5pt padding.
+$base = new CellStyle();
+$base->fontSize  = 9.0;
+$base->padding   = 5.0;
+$base->textAlign = 'right';
 
-// Bold rule above the total line
+$grayLabel = $base->clone();
+$grayLabel->setTextColor($midGray);
+
+$boldLabel = $base->clone();
+$boldLabel->fontName = 'Helvetica-Bold';
+
+$boldNavyAmt = $base->clone();
+$boldNavyAmt->fontName = 'Helvetica-Bold';
+$boldNavyAmt->setTextColor($navy);
+
+$doc->fitRow($totalsTable, new Row([
+    Cell::styled('Subtotal:', $grayLabel),
+    Cell::styled(fmtMoney($subtotal), $base),
+]), $totalsCursor);
+
+$doc->fitRow($totalsTable, new Row([
+    Cell::styled(sprintf('Tax (%d%%):', (int)($taxRate * 100)), $grayLabel),
+    Cell::styled(fmtMoney($tax), $base),
+]), $totalsCursor);
+
+// Bold navy rule between tax and total.
+$ruleY = $totalsCursor->currentY();
 $doc->saveState();
 $doc->setStrokeColor($navy);
 $doc->setLineWidth(1.0);
-$doc->moveTo($lx, $ruleY);
+$doc->moveTo(362.0, $ruleY);
 $doc->lineTo(RIGHT, $ruleY);
 $doc->stroke();
 $doc->restoreState();
 
-// Total (navy bold)
-$doc->placeTextStyled('TOTAL:', $lx, $totalY, new TextStyle('Helvetica-Bold', 10.0));
-$doc->saveState();
-$doc->setFillColor($navy);
-$doc->placeTextStyled(fmtMoney($total), $vx, $totalY, new TextStyle('Helvetica-Bold', 10.0));
-$doc->restoreState();
+$doc->fitRow($totalsTable, new Row([
+    Cell::styled('TOTAL:', $boldLabel),
+    Cell::styled(fmtMoney($total), $boldNavyAmt),
+]), $totalsCursor);
 
 // ── footer ────────────────────────────────────────────────────────────────────
 drawRule($doc, 108.0, $teal);

@@ -834,9 +834,24 @@ When creating tables, there is currently no way to justify the content. It all d
 Consider whether this should be implemented as part of column definitions, at cell definition, or both.
 Update the invoice examples to right justify currency amounts.
 
+## Design Decision
+Implemented at the **cell level** via `text_align: TextAlign` on `CellStyle`. This is consistent
+with all other cell style properties (font, color, overflow, word_break). Users apply alignment
+per cell by creating per-column styles. No separate column-level alignment is needed — the existing
+pattern of cloning styles per column already serves this purpose cleanly.
+
 ## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `TextAlign` enum and `text_align` field to `CellStyle` in `tables.rs`
+- [x] Task 3: Update `render_cell` to compute per-line x position based on `text_align`
+- [x] Task 4: Export `TextAlign` from `pdf-core/src/lib.rs`
+- [x] Task 5: Write tests for alignment in `pdf-core/tests/tables_test.rs`
+- [x] Task 6: Update PHP extension (`pdf-php/src/lib.rs`) with `text_align` property and mapping
+- [x] Task 7: Update PHP stubs (`pdf-php/pdf-php.stubs.php`)
+- [x] Task 8: Update invoice examples (Rust + PHP) to right-justify currency columns
+- [x] Task 9: Update `docs/features/tables.md`
 
 ## Status
-ready
+complete
 
 ---

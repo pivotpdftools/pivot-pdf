@@ -32,9 +32,9 @@ class Color
 
 class TextStyle
 {
-    public string $font_name;
-    public float $font_size;
-    public int $font_handle;
+    public string $fontName;
+    public float $fontSize;
+    public int $fontHandle;
 
     /**
      * Create a TextStyle with a builtin font name.
@@ -46,11 +46,11 @@ class TextStyle
      *                           Times-BoldItalic, Courier, Courier-Bold,
      *                           Courier-Oblique, Courier-BoldOblique,
      *                           Symbol, ZapfDingbats
-     * @param float  $font_size Font size in points (default: 12.0)
+     * @param float  $fontSize Font size in points (default: 12.0)
      */
     public function __construct(
         string $font = 'Helvetica',
-        float $font_size = 12.0
+        float $fontSize = 12.0
     ) {}
 
     /**
@@ -58,11 +58,11 @@ class TextStyle
      * PdfDocument::loadFontFile().
      *
      * @param int   $handle    Font handle returned by loadFontFile()
-     * @param float $font_size Font size in points (default: 12.0)
+     * @param float $fontSize Font size in points (default: 12.0)
      */
     public static function truetype(
         int $handle,
-        float $font_size = 12.0
+        float $fontSize = 12.0
     ): self {}
 }
 
@@ -97,7 +97,7 @@ class TextFlow
      *   "hyphenate" — force-break with a hyphen at the break point
      *   "normal"    — no breaking; wide words overflow the box
      */
-    public string $word_break;
+    public string $wordBreak;
 
     public function __construct() {}
 
@@ -117,9 +117,9 @@ class TextFlow
 
 class CellStyle
 {
-    public string $font_name;
-    public int $font_handle;
-    public float $font_size;
+    public string $fontName;
+    public int $fontHandle;
+    public float $fontSize;
     public float $padding;
     /** Overflow mode: "wrap", "clip", or "shrink" */
     public string $overflow;
@@ -131,13 +131,22 @@ class CellStyle
      *   "hyphenate" — force-break with a hyphen at the break point
      *   "normal"    — no breaking; wide words overflow the cell
      */
-    public string $word_break;
+    public string $wordBreak;
+    /**
+     * Horizontal text alignment within the cell.
+     *
+     * Allowed values:
+     *   "left"   — left-aligned (default)
+     *   "center" — centered
+     *   "right"  — right-aligned
+     */
+    public string $textAlign;
 
     /**
      * Create a CellStyle with default values.
      *
-     * Defaults: font = "Helvetica", font_size = 10.0, padding = 4.0,
-     *           overflow = "wrap", word_break = "break".
+     * Defaults: fontName = "Helvetica", fontSize = 10.0, padding = 4.0,
+     *           overflow = "wrap", wordBreak = "break", textAlign = "left".
      */
     public function __construct() {}
 
@@ -154,6 +163,19 @@ class CellStyle
      * @param Color|null $color Text color, or null for default
      */
     public function setTextColor(?Color $color): void {}
+
+    /**
+     * Return a copy of this style as a new CellStyle instance.
+     *
+     * PHP's native `clone` operator does not work on extension objects.
+     * Use this method instead:
+     *
+     * ```php
+     * $right = $base->clone();
+     * $right->textAlign = 'right';
+     * ```
+     */
+    public function clone(): self {}
 }
 
 class Cell

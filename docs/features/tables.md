@@ -139,6 +139,51 @@ let mut header_style = CellStyle::default();
 header_style.background_color = Some(Color::rgb(0.2, 0.3, 0.5));  // dark blue cell
 ```
 
+## Text Alignment
+
+Each cell has a `text_align: TextAlign` field that controls horizontal alignment:
+
+| Variant | Behavior |
+|---------|----------|
+| `TextAlign::Left` | Left-aligned (default) |
+| `TextAlign::Center` | Centered within the cell |
+| `TextAlign::Right` | Right-aligned — primary use case: currency values |
+
+```rust
+use pdf_core::{Cell, CellStyle, TextAlign};
+
+// Right-align a currency column
+let amount_style = CellStyle {
+    text_align: TextAlign::Right,
+    ..CellStyle::default()
+};
+Cell::styled("$1,234.56", amount_style)
+```
+
+For tables with consistent column alignment (e.g., all amounts right-aligned), create one style
+per column type and clone it for each cell:
+
+```rust
+let desc_style  = CellStyle::default();  // Left (default)
+let num_style   = CellStyle { text_align: TextAlign::Right, ..CellStyle::default() };
+
+let row = Row::new(vec![
+    Cell::styled("Web Development", desc_style),
+    Cell::styled("40",             num_style.clone()),
+    Cell::styled("$150.00",        num_style.clone()),
+    Cell::styled("$6,000.00",      num_style),
+]);
+```
+
+In PHP:
+```php
+$style = new CellStyle();
+$style->textAlign = 'right';  // 'left', 'center', or 'right'
+```
+
+Each wrapped line within a cell is individually aligned — a multi-line right-aligned cell will
+have each line flush to the right edge of the cell.
+
 ## Styling
 
 `CellStyle` controls per-cell appearance:
@@ -150,6 +195,7 @@ header_style.background_color = Some(Color::rgb(0.2, 0.3, 0.5));  // dark blue c
 | `padding` | `f64` | 4.0 pt | All four sides |
 | `overflow` | `CellOverflow` | `Wrap` | |
 | `word_break` | `WordBreak` | `BreakAll` | See [Word Break](word-break.md) |
+| `text_align` | `TextAlign` | `Left` | `Left`, `Center`, or `Right` |
 | `background_color` | `Option<Color>` | None | |
 | `text_color` | `Option<Color>` | None (black) | |
 
@@ -211,7 +257,6 @@ doc.end_page()?;
 
 ## Limitations
 
-- **Left-aligned text only** — no center or right alignment per cell.
 - **No column or row span** — each cell occupies exactly one column.
 - **Padding is uniform** — all four sides share the same padding value.
 - **No table-level min/max width** — column widths must be set explicitly.
@@ -245,3 +290,5 @@ Each cell is wrapped in a PDF graphics state save/restore (`q`/`Q`). This isolat
 - **Issue 12** (2026-02): Initial implementation. Tables with Wrap/Clip/Shrink overflow, row/cell backgrounds, configurable borders, and multi-page flow using `fit_table`.
 - **Issue 12 redesign** (2026-02): Replaced `fit_table` + internal row storage with `fit_row` + caller-owned `TableCursor`. Enables streaming from database cursors. `is_first_row()` added to support automatic header repetition across pages.
 - **Issue 20** (2026-02): Added `word_break: WordBreak` to `CellStyle` (default `BreakAll`). Long words are now broken at character boundaries by default instead of overflowing. See [Word Break](word-break.md) for details.
+- **Issue 25** (2026-02): Added `text_align: TextAlign` to `CellStyle` (default `Left`). Each cell can be independently left-, center-, or right-aligned. Multi-line cells align each wrapped line independently. Invoice examples updated to right-align all currency columns.
+- **Issue 25 follow-up** (2026-02): Fixed PHP property naming in stubs and examples. ext-php-rs converts Rust snake_case field names to PHP camelCase property names (e.g., `text_align` → `textAlign`, `font_name` → `fontName`). Stubs and all PHP examples updated to use the correct camelCase names. The `clone()` docblock and `wordBreak` (TextFlow) stub were also corrected.

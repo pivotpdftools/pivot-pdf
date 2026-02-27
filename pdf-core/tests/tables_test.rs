@@ -1,6 +1,6 @@
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect,
-    Row, Table, TableCursor, WordBreak,
+    Row, Table, TableCursor, TextAlign, WordBreak,
 };
 
 /// Check whether a byte pattern exists in the buffer.
@@ -643,4 +643,153 @@ fn word_break_increases_cell_height_to_fit_all_pieces() {
     let row_height = y_before - y_after;
     // Expect at least 2 lines of text (each ~12pt) plus padding: > 24pt
     assert!(row_height > 24.0, "row height should grow to fit broken word, got {}", row_height);
+}
+
+// -------------------------------------------------------
+// Text alignment tests
+// -------------------------------------------------------
+
+/// Extract the x value from the first "x y Td\n" occurrence in uncompressed PDF bytes.
+///
+/// The content stream format is `{x} {y} Td\n`, e.g. `76 710.4 Td\n`.
+/// Used to verify that different alignments produce different x coordinates.
+fn first_td_x(bytes: &[u8]) -> Option<f64> {
+    let marker = b" Td\n";
+    let pos = bytes.windows(marker.len()).position(|w| w == marker)?;
+    let before = &bytes[..pos];
+    let start = before.iter().rposition(|&b| b == b'\n')? + 1;
+    let td_line = &bytes[start..pos];
+    let space = td_line.iter().position(|&b| b == b' ')?;
+    let x_str = std::str::from_utf8(&td_line[..space]).ok()?;
+    x_str.parse().ok()
+}
+
+#[test]
+fn default_cell_style_is_left_aligned() {
+    assert_eq!(CellStyle::default().text_align, TextAlign::Left);
+}
+
+#[test]
+fn left_aligned_td_starts_at_cell_x_plus_padding() {
+    // Table x=72, col_width=200, padding=4 → expected x = 76.
+    let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+    let table = Table::new(vec![200.0]);
+    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&rect);
+    doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    let x = first_td_x(&bytes).expect("should have a Td operator");
+    assert!((x - 76.0).abs() < 0.01, "left-aligned x should be 76, got {}", x);
+}
+
+#[test]
+fn right_aligned_td_x_is_greater_than_left() {
+    // Right-aligned text starts further right than left-aligned for the same text.
+    let table = Table::new(vec![200.0]);
+    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+
+    let left_x = {
+        let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+        let mut doc = make_doc();
+        doc.begin_page(612.0, 792.0);
+        let mut cursor = TableCursor::new(&rect);
+        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.end_page().unwrap();
+        let bytes = doc.end_document().unwrap();
+        first_td_x(&bytes).expect("Td in left-aligned PDF")
+    };
+
+    let right_x = {
+        let style = CellStyle { text_align: TextAlign::Right, ..CellStyle::default() };
+        let mut doc = make_doc();
+        doc.begin_page(612.0, 792.0);
+        let mut cursor = TableCursor::new(&rect);
+        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.end_page().unwrap();
+        let bytes = doc.end_document().unwrap();
+        first_td_x(&bytes).expect("Td in right-aligned PDF")
+    };
+
+    assert!(
+        right_x > left_x,
+        "right-aligned x ({}) should exceed left-aligned x ({})",
+        right_x, left_x
+    );
+}
+
+#[test]
+fn center_aligned_td_x_is_between_left_and_right() {
+    let table = Table::new(vec![200.0]);
+    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+
+    let left_x = {
+        let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+        let mut doc = make_doc();
+        doc.begin_page(612.0, 792.0);
+        let mut cursor = TableCursor::new(&rect);
+        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.end_page().unwrap();
+        let bytes = doc.end_document().unwrap();
+        first_td_x(&bytes).expect("Td in left-aligned PDF")
+    };
+
+    let right_x = {
+        let style = CellStyle { text_align: TextAlign::Right, ..CellStyle::default() };
+        let mut doc = make_doc();
+        doc.begin_page(612.0, 792.0);
+        let mut cursor = TableCursor::new(&rect);
+        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.end_page().unwrap();
+        let bytes = doc.end_document().unwrap();
+        first_td_x(&bytes).expect("Td in right-aligned PDF")
+    };
+
+    let center_x = {
+        let style = CellStyle { text_align: TextAlign::Center, ..CellStyle::default() };
+        let mut doc = make_doc();
+        doc.begin_page(612.0, 792.0);
+        let mut cursor = TableCursor::new(&rect);
+        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.end_page().unwrap();
+        let bytes = doc.end_document().unwrap();
+        first_td_x(&bytes).expect("Td in center-aligned PDF")
+    };
+
+    assert!(
+        center_x > left_x && center_x < right_x,
+        "center x ({}) should be between left ({}) and right ({})",
+        center_x, left_x, right_x
+    );
+}
+
+#[test]
+fn right_aligned_multi_line_produces_valid_pdf() {
+    // Narrow column forces wrapping. Right alignment must correctly position each line.
+    let style = CellStyle {
+        text_align: TextAlign::Right,
+        font_size: 10.0,
+        ..CellStyle::default()
+    };
+    let table = Table::new(vec![80.0]);
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    doc.fit_row(
+        &table,
+        &Row::new(vec![Cell::styled("Short text and more", style)]),
+        &mut cursor,
+    )
+    .unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert!(contains(&bytes, b"%PDF-1.7"));
+    assert!(contains(&bytes, b"%%EOF"));
+    // Multi-line output requires at least two Td operators
+    let td_count = bytes.windows(4).filter(|w| *w == b" Td\n" as &[u8]).count();
+    assert!(td_count >= 2, "multi-line right-aligned cell should have >=2 Td operators");
 }
