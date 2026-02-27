@@ -261,6 +261,15 @@ impl TableCursor {
     pub fn is_first_row(&self) -> bool {
         self.first_row
     }
+
+    /// Returns the Y coordinate where the next row would be placed.
+    ///
+    /// After placing all rows, this equals the bottom edge of the last row.
+    /// Use it to position content that follows the table (e.g., totals section)
+    /// without guessing where the table ended.
+    pub fn current_y(&self) -> f64 {
+        self.current_y
+    }
 }
 
 // -------------------------------------------------------

@@ -38,3 +38,7 @@ path = "rust/generate_page_numbers.rs"
 [[example]]
 name = "generate_sakila"
 path = "rust/generate_sakila.rs"
+
+[[example]]
+name = "generate_invoice"
+path = "rust/generate_invoice.rs"

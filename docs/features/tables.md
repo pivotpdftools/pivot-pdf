@@ -82,10 +82,11 @@ impl TableCursor {
     pub fn new(rect: &Rect) -> Self       // current_y = rect.y, is_first_row = true
     pub fn reset(&mut self, rect: &Rect)  // call when starting a new page
     pub fn is_first_row(&self) -> bool    // true if no rows placed on this page yet
+    pub fn current_y(&self) -> f64        // Y below the last row placed (table bottom)
 }
 ```
 
-The cursor is owned by the caller. This means the caller can inspect `is_first_row()` before each `fit_row` call to decide whether to insert a header.
+The cursor is owned by the caller. This means the caller can inspect `is_first_row()` before each `fit_row` call to decide whether to insert a header. After all rows are placed, `current_y()` returns the exact Y coordinate at the bottom of the last row — use this to position content that follows the table (e.g., a totals section) without hardcoding a coordinate.
 
 ## Row Height
 

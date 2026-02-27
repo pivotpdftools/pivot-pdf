@@ -236,6 +236,15 @@ class TableCursor
      * Use this to insert a repeated header row at the top of each page.
      */
     public function isFirstRow(): bool {}
+
+    /**
+     * Returns the Y coordinate where the next row would be placed.
+     *
+     * After placing all rows, this equals the bottom edge of the last row.
+     * Use it to position content below the table (e.g., totals section)
+     * without guessing where the table ended.
+     */
+    public function currentY(): float {}
 }
 
 class PdfDocument

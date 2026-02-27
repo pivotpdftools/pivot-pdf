@@ -747,7 +747,7 @@ ready
 # Issue 21: Fake Invoice Example
 ## Description
 Create a realistic fake invoice example in both Rust and PHP that demonstrates the library's primary use case. The invoice should include:
-- Company logo (image)
+- Company logo (generate a ficticious company logo image)
 - Bill-to address block
 - Invoice metadata (date, invoice number, due date)
 - Line items table (description, qty, unit price, total)
@@ -756,10 +756,19 @@ Create a realistic fake invoice example in both Rust and PHP that demonstrates t
 
 The example should use generated/hardcoded data (no external dependencies). Output to `examples/output/rust-invoice.pdf` and `examples/output/php-invoice.pdf`.
 
+A review of this implementation for the Rust and PHP examples resulted in rejection. The examples do not properly utilize the cursor to obtain the current_y coordinate after the items table is created. The result is "guessing" where the subtotal/totals items should begin.
+
+**Fix:** Added `TableCursor::current_y()` public getter to `pdf-core`. `draw_line_items` now returns `cursor.current_y()` and `draw_totals` accepts that value to position all elements dynamically. Same pattern applied to the PHP example via `$cursor->currentY()`.
+
 ## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `examples/rust/generate_invoice.rs` (Rust invoice example)
+- [x] Task 3: Register `generate_invoice` in `examples/Cargo.toml`
+- [x] Task 4: Create `examples/php/generate_invoice.php` (PHP mirror)
+- [x] Task 5: Run `cargo test` to confirm everything still passes
 
 ## Status
-ready
+complete
 
 ---
 
@@ -808,5 +817,18 @@ With the repository up on github, we want to enable github pages. Since we have 
 
 ## Status
 complete
+
+---
+
+# Issue 25: Table Column and Cell justification
+## Description
+When creating tables, there is currently no way to justify the content. It all defaults to left justify. Primary use case is the ability to right justify currency values in a table.
+Consider whether this should be implemented as part of column definitions, at cell definition, or both.
+Update the invoice examples to right justify currency amounts.
+
+## Tasks
+
+## Status
+ready
 
 ---

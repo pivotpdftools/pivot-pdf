@@ -486,6 +486,10 @@ impl PhpTableCursor {
     pub fn is_first_row(&self) -> bool {
         self.inner.is_first_row()
     }
+
+    pub fn current_y(&self) -> f64 {
+        self.inner.current_y()
+    }
 }
 
 // ----------------------------------------------------------

@@ -68,6 +68,7 @@ When modifying pdf-core's public API:
 
 ## Working on Issues
 - Consult ISSUES.md for issue descriptions, tasks, and statuses
+- Consult files located in `/docs` to learn how the library works
 - Only work on issues marked as ready
 - Work on one issue at a time
 - Update status to in-progress when starting work
