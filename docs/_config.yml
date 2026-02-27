@@ -9,6 +9,8 @@ remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-remote-theme
 
+google_analytics: G-PR3H1YSH6X
+
 # Exclude large reference files from Jekyll processing
 exclude:
   - PDF32000_2008.pdf
