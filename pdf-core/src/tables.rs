@@ -1,7 +1,9 @@
 use crate::document::format_coord;
 use crate::fonts::{BuiltinFont, FontRef};
 use crate::graphics::Color;
-use crate::textflow::{line_height_for, measure_word, FitResult, Rect, TextStyle, UsedFonts};
+use crate::textflow::{
+    break_word, line_height_for, measure_word, FitResult, Rect, TextStyle, UsedFonts, WordBreak,
+};
 use crate::truetype::TrueTypeFont;
 use crate::writer::escape_pdf_string;
 
@@ -35,6 +37,8 @@ pub struct CellStyle {
     pub padding: f64,
     /// How to handle text that exceeds the available cell height.
     pub overflow: CellOverflow,
+    /// How to handle words wider than the cell's available width.
+    pub word_break: WordBreak,
 }
 
 impl Default for CellStyle {
@@ -46,6 +50,7 @@ impl Default for CellStyle {
             font_size: 10.0,
             padding: 4.0,
             overflow: CellOverflow::Wrap,
+            word_break: WordBreak::BreakAll,
         }
     }
 }
@@ -314,7 +319,7 @@ fn measure_cell_height(
     let avail_width = col_width - 2.0 * style.padding;
     let ts = make_text_style(style);
     let lh = line_height_for(&ts, tt_fonts);
-    let lines = count_lines(text, avail_width, &ts, tt_fonts);
+    let lines = count_lines(text, avail_width, &ts, style.word_break, tt_fonts);
     lines as f64 * lh + 2.0 * style.padding
 }
 
@@ -327,24 +332,28 @@ fn make_text_style(style: &CellStyle) -> TextStyle {
 }
 
 /// Count the total number of wrapped lines for `text` given the available width.
-fn count_lines(text: &str, avail_width: f64, style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> usize {
+fn count_lines(
+    text: &str,
+    avail_width: f64,
+    style: &TextStyle,
+    word_break: WordBreak,
+    tt_fonts: &[TrueTypeFont],
+) -> usize {
     if text.is_empty() {
         return 1;
     }
     text.split('\n')
-        .map(|para| count_paragraph_lines(para, avail_width, style, tt_fonts))
+        .map(|para| count_paragraph_lines(para, avail_width, style, word_break, tt_fonts))
         .sum::<usize>()
         .max(1)
 }
 
 /// Count lines for a single paragraph (no newlines).
-///
-/// Uses `line_width == 0.0` to detect the first word on a line,
-/// matching the `current_line.is_empty()` check in `wrap_paragraph`.
 fn count_paragraph_lines(
     text: &str,
     avail_width: f64,
     style: &TextStyle,
+    word_break: WordBreak,
     tt_fonts: &[TrueTypeFont],
 ) -> usize {
     let text = text.trim();
@@ -366,6 +375,15 @@ fn count_paragraph_lines(
         if needed > avail_width && line_width > 0.0 {
             lines += 1;
             line_width = word_w;
+            // If this word still overflows on its own line, count extra lines.
+            if word_break != WordBreak::Normal && word_w > avail_width {
+                lines += count_break_lines(word, avail_width, style, word_break, tt_fonts) - 1;
+                line_width = trailing_piece_width(word, avail_width, style, word_break, tt_fonts);
+            }
+        } else if word_break != WordBreak::Normal && word_w > avail_width {
+            // First word on a fresh line and it's still too wide.
+            lines += count_break_lines(word, avail_width, style, word_break, tt_fonts) - 1;
+            line_width = trailing_piece_width(word, avail_width, style, word_break, tt_fonts);
         } else {
             line_width = needed;
         }
@@ -373,11 +391,41 @@ fn count_paragraph_lines(
     lines
 }
 
+/// Count how many lines a single oversized word occupies when broken.
+fn count_break_lines(
+    word: &str,
+    avail_width: f64,
+    style: &TextStyle,
+    word_break: WordBreak,
+    tt_fonts: &[TrueTypeFont],
+) -> usize {
+    break_word(word, avail_width, style, word_break, tt_fonts).len()
+}
+
+/// Width of the last piece when a word is broken across lines.
+fn trailing_piece_width(
+    word: &str,
+    avail_width: f64,
+    style: &TextStyle,
+    word_break: WordBreak,
+    tt_fonts: &[TrueTypeFont],
+) -> f64 {
+    break_word(word, avail_width, style, word_break, tt_fonts)
+        .last()
+        .map_or(0.0, |p| measure_word(p, style, tt_fonts))
+}
+
 /// Word-wrap `text` into lines that fit within `avail_width`.
-fn wrap_text(text: &str, avail_width: f64, style: &TextStyle, tt_fonts: &[TrueTypeFont]) -> Vec<String> {
+fn wrap_text(
+    text: &str,
+    avail_width: f64,
+    style: &TextStyle,
+    word_break: WordBreak,
+    tt_fonts: &[TrueTypeFont],
+) -> Vec<String> {
     let mut lines: Vec<String> = Vec::new();
     for para in text.split('\n') {
-        wrap_paragraph(para.trim(), avail_width, style, tt_fonts, &mut lines);
+        wrap_paragraph(para.trim(), avail_width, style, word_break, tt_fonts, &mut lines);
     }
     if lines.is_empty() {
         lines.push(String::new());
@@ -390,6 +438,7 @@ fn wrap_paragraph(
     text: &str,
     avail_width: f64,
     style: &TextStyle,
+    word_break: WordBreak,
     tt_fonts: &[TrueTypeFont],
     out: &mut Vec<String>,
 ) {
@@ -411,8 +460,13 @@ fn wrap_paragraph(
 
         if needed > avail_width && !current_line.is_empty() {
             out.push(current_line.clone());
-            current_line = word.to_string();
-            line_width = word_w;
+            current_line = String::new();
+            line_width = 0.0;
+            // Fall through to place word on fresh line (may need breaking).
+            place_word_on_line(word, avail_width, style, word_break, tt_fonts, &mut current_line, &mut line_width, out);
+        } else if word_w > avail_width && word_break != WordBreak::Normal && current_line.is_empty() {
+            // Fresh line, word is too wide — break it.
+            place_word_on_line(word, avail_width, style, word_break, tt_fonts, &mut current_line, &mut line_width, out);
         } else {
             if !current_line.is_empty() {
                 current_line.push(' ');
@@ -423,6 +477,44 @@ fn wrap_paragraph(
     }
     if !current_line.is_empty() {
         out.push(current_line);
+    }
+}
+
+/// Append a single word to lines, breaking it if it is wider than `avail_width`.
+///
+/// All full pieces except the last are pushed to `out`. The last piece is
+/// accumulated into `current_line`/`line_width` so subsequent words can
+/// continue on the same line.
+fn place_word_on_line(
+    word: &str,
+    avail_width: f64,
+    style: &TextStyle,
+    word_break: WordBreak,
+    tt_fonts: &[TrueTypeFont],
+    current_line: &mut String,
+    line_width: &mut f64,
+    out: &mut Vec<String>,
+) {
+    let word_w = measure_word(word, style, tt_fonts);
+
+    if word_w <= avail_width || word_break == WordBreak::Normal {
+        if !current_line.is_empty() {
+            current_line.push(' ');
+        }
+        current_line.push_str(word);
+        *line_width += word_w;
+        return;
+    }
+
+    let pieces = break_word(word, avail_width, style, word_break, tt_fonts);
+    let last_idx = pieces.len() - 1;
+    for (i, piece) in pieces.into_iter().enumerate() {
+        if i < last_idx {
+            out.push(piece);
+        } else {
+            *current_line = piece.clone();
+            *line_width = measure_word(&piece, style, tt_fonts);
+        }
     }
 }
 
@@ -602,6 +694,7 @@ fn render_cell(
             style.font_size,
             avail_width,
             avail_height,
+            style.word_break,
             tt_fonts,
         )
     } else {
@@ -613,7 +706,7 @@ fn render_cell(
         font_size: effective_font_size,
     };
     let lh = line_height_for(&ts, tt_fonts);
-    let lines = wrap_text(&cell.text, avail_width, &ts, tt_fonts);
+    let lines = wrap_text(&cell.text, avail_width, &ts, style.word_break, tt_fonts);
 
     output.extend_from_slice(b"q\n");
 
@@ -684,16 +777,16 @@ fn render_cell(
 /// Reduce font size by 0.5pt steps until the text fits within the available
 /// dimensions, stopping at a minimum of 4pt.
 ///
-/// Two conditions must both be satisfied for the text to "fit":
-/// - HEIGHT: wrapped line count × line height ≤ avail_height
-/// - WIDTH: every individual word ≤ avail_width (words cannot be broken,
-///   so a word wider than the column can never wrap to fit — only shrinking helps)
+/// When `word_break` is not `Normal`, every word can be broken, so only the
+/// height constraint needs to be satisfied. When `Normal`, width must also
+/// fit (a word wider than the column can never wrap — only shrinking helps).
 fn shrink_font_size(
     text: &str,
     font: FontRef,
     initial_size: f64,
     avail_width: f64,
     avail_height: f64,
+    word_break: WordBreak,
     tt_fonts: &[TrueTypeFont],
 ) -> f64 {
     const MIN_FONT_SIZE: f64 = 4.0;
@@ -703,9 +796,10 @@ fn shrink_font_size(
     loop {
         let ts = TextStyle { font, font_size };
         let lh = line_height_for(&ts, tt_fonts);
-        let lines = count_lines(text, avail_width, &ts, tt_fonts);
+        let lines = count_lines(text, avail_width, &ts, word_break, tt_fonts);
         let fits_height = lines as f64 * lh <= avail_height;
-        let fits_width = text.split_whitespace().all(|w| measure_word(w, &ts, tt_fonts) <= avail_width);
+        let fits_width = word_break != WordBreak::Normal
+            || text.split_whitespace().all(|w| measure_word(w, &ts, tt_fonts) <= avail_width);
         if (fits_height && fits_width) || font_size <= MIN_FONT_SIZE {
             break;
         }

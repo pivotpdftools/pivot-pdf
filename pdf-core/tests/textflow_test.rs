@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle, WordBreak};
 
 /// Helper: check that a byte pattern exists in the buffer.
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
@@ -379,4 +379,150 @@ fn place_text_styled_uses_correct_font() {
 
     assert!(contains(&bytes, b"/F6 18 Tf"));
     assert!(contains(&bytes, b"(Styled) Tj"));
+}
+
+// -------------------------------------------------------
+// Word-break tests
+// -------------------------------------------------------
+
+/// A narrow box where the long word must be broken.
+fn narrow_rect() -> Rect {
+    Rect { x: 72.0, y: 720.0, width: 60.0, height: 200.0 }
+}
+
+fn make_doc() -> PdfDocument<Vec<u8>> {
+    PdfDocument::new(Vec::<u8>::new()).unwrap()
+}
+
+#[test]
+fn break_all_splits_long_word_across_lines() {
+    // "WWWWWWWWWW" at 12pt Helvetica is much wider than 60pt.
+    // With BreakAll (default), it should be split into pieces that each fit.
+    let style = TextStyle::default(); // 12pt Helvetica
+    let mut tf = TextFlow::new();
+    tf.add_text("WWWWWWWWWW", &style);
+    // word_break defaults to BreakAll — no explicit set needed.
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let result = doc.fit_textflow(&mut tf, &narrow_rect()).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    // All text was placed (no overflow).
+    assert_eq!(result, FitResult::Stop);
+    // Multiple Td operators mean multiple lines were emitted.
+    assert!(contains(&bytes, b"0 -"), "expected multi-line Td operators from word break");
+}
+
+#[test]
+fn break_all_result_is_stop_not_box_empty() {
+    // Before word-break was implemented, a word wider than the box returned
+    // BoxEmpty. Now it should split the word and return Stop.
+    let mut tf = TextFlow::new();
+    tf.add_text("superlongwordwithoutspaces", &TextStyle::default());
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let result = doc.fit_textflow(&mut tf, &narrow_rect()).unwrap();
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    assert_ne!(result, FitResult::BoxEmpty, "word break should prevent BoxEmpty");
+    assert_eq!(result, FitResult::Stop);
+}
+
+#[test]
+fn hyphenate_mode_inserts_hyphen_at_break() {
+    let style = TextStyle::default();
+    let mut tf = TextFlow::new();
+    tf.word_break = WordBreak::Hyphenate;
+    tf.add_text("WWWWWWWWWW", &style);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let result = doc.fit_textflow(&mut tf, &narrow_rect()).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    // A hyphen at the end of a PDF literal string looks like `-)`.
+    // Checking for `-) Tj` avoids false positives from negative coordinates.
+    assert!(
+        contains(&bytes, b"-) Tj"),
+        "hyphenate mode should emit a hyphen at break points"
+    );
+}
+
+#[test]
+fn normal_mode_does_not_break_word() {
+    // With WordBreak::Normal, wide words are emitted as-is (overflow).
+    // The box is too narrow for "WWWW" at 12pt but the result should still
+    // complete (BoxEmpty is returned because no text can fit at all when
+    // the first word is wider than the box and nothing has been placed yet).
+    let mut tf = TextFlow::new();
+    tf.word_break = WordBreak::Normal;
+    tf.add_text("WWWWWWWWWW", &TextStyle::default());
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    // Use a very narrow rect so the word definitely cannot fit.
+    let tiny_rect = Rect { x: 72.0, y: 720.0, width: 10.0, height: 200.0 };
+    let result = doc.fit_textflow(&mut tf, &tiny_rect).unwrap();
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    // Without word-break the flow cannot place the word in a 10pt-wide box.
+    assert_eq!(result, FitResult::BoxEmpty);
+}
+
+#[test]
+fn word_break_does_not_affect_normal_words() {
+    // Short words that fit on a line should be placed unchanged.
+    let mut tf = TextFlow::new();
+    tf.add_text("Hello world", &TextStyle::default());
+
+    let rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 200.0 };
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let result = doc.fit_textflow(&mut tf, &rect).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    assert!(contains(&bytes, b"(Hello) Tj"));
+    assert!(contains(&bytes, b"( world) Tj"));
+}
+
+#[test]
+fn break_all_multi_page_cursor_is_consistent() {
+    // A very long word that forces a page break mid-word should resume
+    // correctly on the next page with the remaining characters.
+    let mut tf = TextFlow::new();
+    // 26 W's — much wider than the narrow box; forces many lines.
+    tf.add_text("WWWWWWWWWWWWWWWWWWWWWWWWWW", &TextStyle::default());
+
+    // A box that only fits ~2 lines of text.
+    let small_box = Rect { x: 72.0, y: 720.0, width: 60.0, height: 30.0 };
+
+    let mut doc = make_doc();
+
+    doc.begin_page(612.0, 792.0);
+    let r1 = doc.fit_textflow(&mut tf, &small_box).unwrap();
+    doc.end_page().unwrap();
+
+    doc.begin_page(612.0, 792.0);
+    let r2 = doc.fit_textflow(&mut tf, &small_box).unwrap();
+    doc.end_page().unwrap();
+
+    doc.begin_page(612.0, 792.0);
+    let r3 = doc.fit_textflow(&mut tf, &small_box).unwrap();
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    // At least the first call should return BoxFull (more text remains),
+    // and eventually a Stop should be produced.
+    assert_eq!(r1, FitResult::BoxFull, "first page should be full, not all placed");
+    let finished = r2 == FitResult::Stop || r3 == FitResult::Stop;
+    assert!(finished, "text should eventually be fully placed");
 }

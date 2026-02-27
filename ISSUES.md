@@ -738,9 +738,17 @@ Two behaviors are needed:
 The fix must be applied consistently to both `fit_textflow` and `fit_row` (table cells), as both share the word-wrap logic.
 
 ## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `WordBreak` enum to `textflow.rs`; add `word_break: WordBreak` to `TextFlow`; add `word_break: WordBreak` to `CellStyle`
+- [x] Task 3: Implement `break_wide_words` in `textflow.rs` — pre-processes the word list to split any word wider than a given width, with optional hyphen at break points
+- [x] Task 4: Update `TextFlow::generate_content_ops` to apply `break_wide_words` before the layout loop
+- [x] Task 5: Update `tables.rs` `wrap_paragraph` and `count_paragraph_lines` to break wide words using the same helper
+- [x] Task 6: Write tests for word-break scenarios in textflow and table cells
+- [x] Task 7: Update PHP extension and stubs with `WordBreak` support
+- [x] Task 8: Update documentation (`docs/features/`)
 
 ## Status
-ready
+complete
 
 ---
 

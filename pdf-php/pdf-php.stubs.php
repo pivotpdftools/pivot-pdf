@@ -89,6 +89,16 @@ class Rect
 
 class TextFlow
 {
+    /**
+     * How words wider than the bounding box are handled.
+     *
+     * Allowed values:
+     *   "break"     — force-break at a character boundary (default)
+     *   "hyphenate" — force-break with a hyphen at the break point
+     *   "normal"    — no breaking; wide words overflow the box
+     */
+    public string $word_break;
+
     public function __construct() {}
 
     /**
@@ -113,11 +123,21 @@ class CellStyle
     public float $padding;
     /** Overflow mode: "wrap", "clip", or "shrink" */
     public string $overflow;
+    /**
+     * Word break mode for words wider than the cell.
+     *
+     * Allowed values:
+     *   "break"     — force-break at a character boundary (default)
+     *   "hyphenate" — force-break with a hyphen at the break point
+     *   "normal"    — no breaking; wide words overflow the cell
+     */
+    public string $word_break;
 
     /**
      * Create a CellStyle with default values.
      *
-     * Defaults: font = "Helvetica", font_size = 10.0, padding = 4.0, overflow = "wrap".
+     * Defaults: font = "Helvetica", font_size = 10.0, padding = 4.0,
+     *           overflow = "wrap", word_break = "break".
      */
     public function __construct() {}
 

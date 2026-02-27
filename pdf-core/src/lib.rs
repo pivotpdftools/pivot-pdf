@@ -13,4 +13,4 @@ pub use fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 pub use graphics::Color;
 pub use images::{ImageFit, ImageId};
 pub use tables::{Cell, CellOverflow, CellStyle, Row, Table, TableCursor};
-pub use textflow::{FitResult, Rect, TextFlow, TextStyle};
+pub use textflow::{FitResult, Rect, TextFlow, TextStyle, WordBreak};

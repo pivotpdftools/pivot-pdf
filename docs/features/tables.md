@@ -149,6 +149,7 @@ header_style.background_color = Some(Color::rgb(0.2, 0.3, 0.5));  // dark blue c
 | `font_size` | `f64` | 10.0 pt | |
 | `padding` | `f64` | 4.0 pt | All four sides |
 | `overflow` | `CellOverflow` | `Wrap` | |
+| `word_break` | `WordBreak` | `BreakAll` | See [Word Break](word-break.md) |
 | `background_color` | `Option<Color>` | None | |
 | `text_color` | `Option<Color>` | None (black) | |
 
@@ -243,3 +244,4 @@ Each cell is wrapped in a PDF graphics state save/restore (`q`/`Q`). This isolat
 
 - **Issue 12** (2026-02): Initial implementation. Tables with Wrap/Clip/Shrink overflow, row/cell backgrounds, configurable borders, and multi-page flow using `fit_table`.
 - **Issue 12 redesign** (2026-02): Replaced `fit_table` + internal row storage with `fit_row` + caller-owned `TableCursor`. Enables streaming from database cursors. `is_first_row()` added to support automatic header repetition across pages.
+- **Issue 20** (2026-02): Added `word_break: WordBreak` to `CellStyle` (default `BreakAll`). Long words are now broken at character boundaries by default instead of overflowing. See [Word Break](word-break.md) for details.

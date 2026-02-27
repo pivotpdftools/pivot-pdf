@@ -6,7 +6,7 @@ use ext_php_rs::types::{Zval};
 
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, ImageFit, ImageId,
-    PdfDocument, Rect, Row, Table, TableCursor, TextFlow, TextStyle, TrueTypeFontId,
+    PdfDocument, Rect, Row, Table, TableCursor, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -185,11 +185,15 @@ impl PhpRect {
 /// $tf = new TextFlow();
 /// $tf->addText("Hello ", new TextStyle());
 /// $tf->addText("Bold", new TextStyle("Helvetica-Bold"));
+/// $tf->wordBreak = 'break';    // 'break' (default), 'hyphenate', or 'normal'
 /// ```
 #[php_class]
 #[php(name = "TextFlow")]
 pub struct PhpTextFlow {
     inner: TextFlow,
+    /// Word break mode: "break" (default), "hyphenate", or "normal"
+    #[php(prop)]
+    pub word_break: String,
 }
 
 #[php_impl]
@@ -197,6 +201,7 @@ impl PhpTextFlow {
     pub fn __construct() -> Self {
         PhpTextFlow {
             inner: TextFlow::new(),
+            word_break: "break".to_string(),
         }
     }
 
@@ -222,7 +227,8 @@ impl PhpTextFlow {
 /// $header->fontSize = 12.0;
 /// $header->backgroundColor = new Color(0.2, 0.3, 0.5);
 /// $header->textColor = new Color(1.0, 1.0, 1.0);
-/// $header->overflow = 'wrap'; // 'wrap', 'clip', or 'shrink'
+/// $header->overflow = 'wrap';      // 'wrap', 'clip', or 'shrink'
+/// $header->wordBreak = 'break';    // 'break', 'hyphenate', or 'normal'
 /// ```
 #[php_class]
 #[php(name = "CellStyle")]
@@ -238,6 +244,9 @@ pub struct PhpCellStyle {
     /// Overflow mode: "wrap", "clip", or "shrink"
     #[php(prop)]
     pub overflow: String,
+    /// Word break mode: "break" (default), "hyphenate", or "normal"
+    #[php(prop)]
+    pub word_break: String,
     /// Background color (null = none)
     pub background_color: Option<Color>,
     /// Text color (null = default black)
@@ -253,6 +262,7 @@ impl PhpCellStyle {
             font_size: 10.0,
             padding: 4.0,
             overflow: "wrap".to_string(),
+            word_break: "break".to_string(),
             background_color: None,
             text_color: None,
         }
@@ -286,6 +296,12 @@ impl PhpCellStyle {
             _ => CellOverflow::Wrap,
         };
 
+        let word_break = match self.word_break.as_str() {
+            "hyphenate" => WordBreak::Hyphenate,
+            "normal" => WordBreak::Normal,
+            _ => WordBreak::BreakAll,
+        };
+
         Ok(CellStyle {
             background_color: self.background_color,
             text_color: self.text_color,
@@ -293,6 +309,7 @@ impl PhpCellStyle {
             font_size: self.font_size,
             padding: self.padding,
             overflow,
+            word_break,
         })
     }
 }
@@ -620,6 +637,11 @@ impl PhpPdfDocument {
         rect: &PhpRect,
     ) -> Result<String, String> {
         let core_rect = rect.to_core();
+        flow.inner.word_break = match flow.word_break.as_str() {
+            "hyphenate" => WordBreak::Hyphenate,
+            "normal" => WordBreak::Normal,
+            _ => WordBreak::BreakAll,
+        };
         with_doc!(self, fit_textflow, doc => {
             let result = doc
                 .fit_textflow(

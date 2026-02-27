@@ -1,6 +1,6 @@
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect,
-    Row, Table, TableCursor,
+    Row, Table, TableCursor, WordBreak,
 };
 
 /// Check whether a byte pattern exists in the buffer.
@@ -436,14 +436,14 @@ fn shrink_mode_with_fixed_row_height() {
 }
 
 #[test]
-fn shrink_mode_shrinks_wide_single_word() {
+fn shrink_mode_shrinks_wide_single_word_when_word_break_is_normal() {
     // "WWWWWW" at 14pt Helvetica is ~60pt wide but the column avail_width is 44pt
-    // (col_width 52 - 2×4 padding). No spaces means word wrapping cannot help —
-    // only font shrinking can make it fit. Before the fix, shrink_font_size only
-    // checked height, so the font was left at 14pt and the word overflowed.
+    // (col_width 52 - 2×4 padding). With word_break=Normal, word-breaking is
+    // disabled so only font shrinking can make it fit.
     let style = CellStyle {
         overflow: CellOverflow::Shrink,
         font_size: 14.0,
+        word_break: WordBreak::Normal,
         ..CellStyle::default()
     };
     let row = Row::new(vec![Cell::styled("WWWWWW", style)]);
@@ -537,4 +537,110 @@ fn header_row_with_styled_cells() {
     assert!(contains(&bytes, b"(Alice) Tj"));
     assert!(contains(&bytes, b"0.2 0.2 0.2 rg\n"));
     assert!(contains(&bytes, b"1 1 1 rg\n"));
+}
+
+// -------------------------------------------------------
+// Word-break tests for table cells
+// -------------------------------------------------------
+
+#[test]
+fn wrap_mode_breaks_long_word_in_narrow_cell() {
+    // A word wider than the column's available width should be broken when
+    // word_break is BreakAll (the default). The row height must grow to
+    // accommodate the extra lines.
+    let style = CellStyle {
+        font_size: 10.0,
+        ..CellStyle::default()
+    };
+    let narrow_col = 40.0; // avail_width ≈ 32pt; "WWWWWWWW" at 10pt is ~64pt
+    let table = Table::new(vec![narrow_col]);
+    let row = Row::new(vec![Cell::styled("WWWWWWWW", style)]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    let result = doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    // Multi-line output: at least one Td move-down operator.
+    assert!(contains(&bytes, b"0 -"), "expected multiple lines from word break");
+}
+
+#[test]
+fn normal_word_break_does_not_split_wide_word_in_cell() {
+    // With word_break=Normal, a wide word overflows the cell without breaking.
+    // The row height is based on 1 line (no extra lines counted).
+    let style = CellStyle {
+        font_size: 10.0,
+        word_break: WordBreak::Normal,
+        ..CellStyle::default()
+    };
+    let narrow_col = 40.0;
+    let table = Table::new(vec![narrow_col]);
+    let row = Row::new(vec![Cell::styled("WWWWWWWW", style)]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    let y_before = cursor.current_y();
+    let result = doc.fit_row(&table, &row, &mut cursor).unwrap();
+    let y_after = cursor.current_y();
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    // Row height equals one line (single-line word, no break).
+    let row_height = y_before - y_after;
+    assert!(row_height < 25.0, "expected single-line row height, got {}", row_height);
+}
+
+#[test]
+fn hyphenate_mode_emits_hyphen_in_cell() {
+    let style = CellStyle {
+        font_size: 10.0,
+        word_break: WordBreak::Hyphenate,
+        ..CellStyle::default()
+    };
+    let narrow_col = 40.0;
+    let table = Table::new(vec![narrow_col]);
+    let row = Row::new(vec![Cell::styled("WWWWWWWW", style)]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    // A hyphen at the end of a PDF literal string looks like `-)`.
+    // Checking for `-) Tj` avoids false positives from negative coordinates.
+    assert!(contains(&bytes, b"-) Tj"), "hyphenate mode should emit a hyphen");
+}
+
+#[test]
+fn word_break_increases_cell_height_to_fit_all_pieces() {
+    // Verify the cursor advances by more than one line-height,
+    // proving that the broken pieces increased the measured row height.
+    let style = CellStyle {
+        font_size: 10.0,
+        ..CellStyle::default() // BreakAll by default
+    };
+    let narrow_col = 40.0; // forces multi-line break
+    let table = Table::new(vec![narrow_col]);
+    let row = Row::new(vec![Cell::styled("WWWWWWWW", style)]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let mut cursor = TableCursor::new(&full_rect());
+    let y_before = cursor.current_y();
+    doc.fit_row(&table, &row, &mut cursor).unwrap();
+    let y_after = cursor.current_y();
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    let row_height = y_before - y_after;
+    // Expect at least 2 lines of text (each ~12pt) plus padding: > 24pt
+    assert!(row_height > 24.0, "row height should grow to fit broken word, got {}", row_height);
 }
