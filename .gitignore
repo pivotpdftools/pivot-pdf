@@ -3,3 +3,7 @@
 
 # Generated example output files
 /examples/output/*.pdf
+
+/docs/_site
+/docs/Gemfile
+/docs/Gemfile.lock
