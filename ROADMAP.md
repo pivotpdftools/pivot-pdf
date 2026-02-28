@@ -32,7 +32,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Word wrap | ✅ Implemented | Breaks on whitespace |
-| Word break (long words) | 🔲 Planned | Currently overflows — no hyphenation or force-break |
+| Word break (long words) | ✅ Implemented | Force-break at character boundary; optional hyphen |
 | Mixed font styles in one flow | ✅ Implemented | |
 | Right-to-left text (RTL) | 🔲 Future | Arabic, Hebrew — complex, low priority for now |
 | Vertical text | 🔲 Future | Japanese/CJK — complex, low priority for now |
@@ -65,8 +65,8 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Tables (streaming, row-by-row) | ✅ Implemented | Per-cell styles, overflow modes, borders, backgrounds |
-| Table cell word break | 🔲 Planned | Same gap as TextFlow — long words overflow |
+| Tables (streaming, row-by-row) | ✅ Implemented | Per-cell styles, overflow modes, borders, backgrounds, text alignment |
+| Table cell word break | ✅ Implemented | Force-break at character boundary; optional hyphen |
 | Headers and footers (built-in) | 🔲 Planned | Repeated content registered once, applied each page |
 | Multi-column layout | 🔲 Future | |
 
@@ -104,28 +104,27 @@ Priorities are informed by the core use case: **server-side PDF generation for S
 
 These directly address known gaps in the core generation loop:
 
-1. **Word break / overflow handling** — Long words currently overflow cells and text boxes. A force-break or soft-hyphenation strategy is needed.
-2. **Bezier curves and arcs** — Enables circles, rounded rectangles, and charts. The PDF operators are already defined; this is an incremental addition.
-3. **Font subsetting** — Embedded TrueType fonts can be 1–20 MB. Subsetting cuts this to 5–50 KB, which matters for any document with embedded fonts.
-4. **Hyperlinks** — URI annotations are commonly needed in generated reports and invoices.
+1. **Bezier curves and arcs** — Enables circles, rounded rectangles, and charts. The PDF operators are already defined; this is an incremental addition.
+2. **Font subsetting** — Embedded TrueType fonts can be 1–20 MB. Subsetting cuts this to 5–50 KB, which matters for any document with embedded fonts.
+3. **Hyperlinks** — URI annotations are commonly needed in generated reports and invoices.
 
 ### Tier 2 — Near Term
 
-5. **Bookmarks / outline** — Important for long multi-section documents (contracts, manuals).
-6. **Headers and footers** — Common pattern; currently users must implement this manually via `open_page`.
-7. **PDF/A compliance** — Required for legal/archival use cases. Primarily a metadata and font-embedding constraint.
-8. **More language bindings** — See Language Binding Roadmap below.
+4. **Bookmarks / outline** — Important for long multi-section documents (contracts, manuals).
+5. **Headers and footers** — Common pattern; currently users must implement this manually via `open_page`.
+6. **PDF/A compliance** — Required for legal/archival use cases. Primarily a metadata and font-embedding constraint.
+7. **More language bindings** — See Language Binding Roadmap below.
 
 ### Tier 3 — Future
 
-9. **Forms and interactive fields** — Needed for fillable PDFs (onboarding forms, applications).
-10. **Encryption** — Required when PDFs contain sensitive data.
-11. **Digital signatures** — Required for legally binding e-documents.
-12. **Multi-column text** — Useful for newsletters, academic papers.
-13. **Gradients and shading** — Useful for polished reports.
-14. **Read / parse PDF** — Foundation for field extraction and merging. This is a significant undertaking and planned as a future phase after the creation features are mature.
-15. **Extract form fields** — Depends on read/parse.
-16. **Merge multiple PDFs** — Depends on read/parse.
+8. **Forms and interactive fields** — Needed for fillable PDFs (onboarding forms, applications).
+9. **Encryption** — Required when PDFs contain sensitive data.
+10. **Digital signatures** — Required for legally binding e-documents.
+11. **Multi-column text** — Useful for newsletters, academic papers.
+12. **Gradients and shading** — Useful for polished reports.
+13. **Read / parse PDF** — Foundation for field extraction and merging. This is a significant undertaking and planned as a future phase after the creation features are mature.
+14. **Extract form fields** — Depends on read/parse.
+15. **Merge multiple PDFs** — Depends on read/parse.
 
 ---
 
@@ -164,12 +163,12 @@ PHP Windows support is prioritized because PHP developers on Windows targeting L
 | TrueType fonts | ✅ | ✅ |
 | Page numbers (edit page) | ✅ | ✅ |
 | Large PDF from database (Sakila) | ✅ | ✅ |
+| Fake invoice | ✅ | ✅ |
 
 ### Planned Examples
 
 | Example | Purpose |
 |---------|---------|
-| Fake invoice | Demonstrates the primary use case — a realistic, styled document with logo, line items, and totals |
 | Letter / cover letter | Demonstrates mixed text blocks, fonts, and spacing for a professional document |
 | Report with charts | Demonstrates tables, graphics, and layout working together |
 
@@ -197,7 +196,6 @@ A benchmark suite using Rust's `criterion` crate is planned as a separate effort
 
 | Item | Description |
 |------|-------------|
-| Word break | Long words (no whitespace) overflow TextFlow boxes and table cells without breaking |
 | Full font embedding | TrueType fonts are embedded in full; subsetting is not yet implemented |
 | Per-page font resources | All loaded fonts are declared in every page's resource dict, even if unused on that page |
 | Standard font availability | The 14 standard fonts are used without embedding; PDF 2.0 deprecated this guarantee |
