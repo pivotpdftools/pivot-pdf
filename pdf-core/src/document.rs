@@ -362,12 +362,7 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Place an image on the current page within the given bounding rect.
-    pub fn place_image(
-        &mut self,
-        image: &ImageId,
-        rect: &Rect,
-        fit: ImageFit,
-    ) -> &mut Self {
+    pub fn place_image(&mut self, image: &ImageId, rect: &Rect, fit: ImageFit) -> &mut Self {
         let idx = image.0;
         let img = &self.images[idx];
         let page_height = self
@@ -376,8 +371,7 @@ impl<W: Write> PdfDocument<W> {
             .expect("place_image called with no open page")
             .height;
 
-        let placement =
-            images::calculate_placement(img.width, img.height, rect, fit, page_height);
+        let placement = images::calculate_placement(img.width, img.height, rect, fit, page_height);
 
         self.ensure_image_obj_ids(idx);
         let pdf_name = self.image_obj_ids[&idx].pdf_name.clone();
@@ -440,11 +434,14 @@ impl<W: Write> PdfDocument<W> {
         let pdf_name = format!("Im{}", self.next_image_num);
         self.next_image_num += 1;
 
-        self.image_obj_ids.insert(idx, ImageObjIds {
-            xobject,
-            smask,
-            pdf_name,
-        });
+        self.image_obj_ids.insert(
+            idx,
+            ImageObjIds {
+                xobject,
+                smask,
+                pdf_name,
+            },
+        );
     }
 
     /// Write the image XObject stream(s) for the given image index.
@@ -459,9 +456,7 @@ impl<W: Write> PdfDocument<W> {
         let smask_id = obj_ids.smask;
 
         // Write SMask XObject first if alpha data exists
-        if let (Some(smask_obj_id), Some(smask_data)) =
-            (smask_id, img.smask_data.as_ref())
-        {
+        if let (Some(smask_obj_id), Some(smask_data)) = (smask_id, img.smask_data.as_ref()) {
             let smask_stream = self.make_stream(
                 vec![
                     ("Type", PdfObject::name("XObject")),
@@ -500,9 +495,7 @@ impl<W: Write> PdfDocument<W> {
                 entries.push(("Filter", PdfObject::name("DCTDecode")));
                 PdfObject::stream(entries, img.data.clone())
             }
-            ImageFormat::Png => {
-                self.make_stream(entries, img.data.clone())
-            }
+            ImageFormat::Png => self.make_stream(entries, img.data.clone()),
         };
 
         self.writer.write_object(xobject_id, &image_obj)?;
@@ -776,14 +769,15 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Build the font resource dictionary for a page.
-    fn build_font_dict(
-        &self,
-        used_fonts: &[BuiltinFont],
-        used_truetype: &[usize],
-    ) -> PdfObject {
+    fn build_font_dict(&self, used_fonts: &[BuiltinFont], used_truetype: &[usize]) -> PdfObject {
         let mut entries: Vec<(String, PdfObject)> = used_fonts
             .iter()
-            .map(|f| (f.pdf_name().to_string(), PdfObject::Reference(self.font_obj_ids[f])))
+            .map(|f| {
+                (
+                    f.pdf_name().to_string(),
+                    PdfObject::Reference(self.font_obj_ids[f]),
+                )
+            })
             .collect();
 
         for &idx in used_truetype {
@@ -813,11 +807,12 @@ impl<W: Write> PdfDocument<W> {
             })
             .collect();
 
-        let mut resource_entries: Vec<(String, PdfObject)> =
-            vec![("Font".to_string(), font_dict)];
+        let mut resource_entries: Vec<(String, PdfObject)> = vec![("Font".to_string(), font_dict)];
         if !xobject_entries.is_empty() {
-            resource_entries
-                .push(("XObject".to_string(), PdfObject::Dictionary(xobject_entries)));
+            resource_entries.push((
+                "XObject".to_string(),
+                PdfObject::Dictionary(xobject_entries),
+            ));
         }
 
         PdfObject::Dictionary(resource_entries)
@@ -828,7 +823,12 @@ impl<W: Write> PdfDocument<W> {
         if content_ids.len() == 1 {
             PdfObject::Reference(content_ids[0])
         } else {
-            PdfObject::array(content_ids.iter().map(|id| PdfObject::Reference(*id)).collect())
+            PdfObject::array(
+                content_ids
+                    .iter()
+                    .map(|id| PdfObject::Reference(*id))
+                    .collect(),
+            )
         }
     }
 
@@ -844,8 +844,11 @@ impl<W: Write> PdfDocument<W> {
             let height = self.page_records[i].height;
             let used_fonts: Vec<BuiltinFont> =
                 self.page_records[i].used_fonts.iter().copied().collect();
-            let used_truetype: Vec<usize> =
-                self.page_records[i].used_truetype_fonts.iter().copied().collect();
+            let used_truetype: Vec<usize> = self.page_records[i]
+                .used_truetype_fonts
+                .iter()
+                .copied()
+                .collect();
             let used_images: Vec<usize> =
                 self.page_records[i].used_images.iter().copied().collect();
 

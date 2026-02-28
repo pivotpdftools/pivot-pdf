@@ -387,7 +387,12 @@ fn place_text_styled_uses_correct_font() {
 
 /// A narrow box where the long word must be broken.
 fn narrow_rect() -> Rect {
-    Rect { x: 72.0, y: 720.0, width: 60.0, height: 200.0 }
+    Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 60.0,
+        height: 200.0,
+    }
 }
 
 fn make_doc() -> PdfDocument<Vec<u8>> {
@@ -412,7 +417,10 @@ fn break_all_splits_long_word_across_lines() {
     // All text was placed (no overflow).
     assert_eq!(result, FitResult::Stop);
     // Multiple Td operators mean multiple lines were emitted.
-    assert!(contains(&bytes, b"0 -"), "expected multi-line Td operators from word break");
+    assert!(
+        contains(&bytes, b"0 -"),
+        "expected multi-line Td operators from word break"
+    );
 }
 
 #[test]
@@ -428,7 +436,11 @@ fn break_all_result_is_stop_not_box_empty() {
     doc.end_page().unwrap();
     doc.end_document().unwrap();
 
-    assert_ne!(result, FitResult::BoxEmpty, "word break should prevent BoxEmpty");
+    assert_ne!(
+        result,
+        FitResult::BoxEmpty,
+        "word break should prevent BoxEmpty"
+    );
     assert_eq!(result, FitResult::Stop);
 }
 
@@ -467,7 +479,12 @@ fn normal_mode_does_not_break_word() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     // Use a very narrow rect so the word definitely cannot fit.
-    let tiny_rect = Rect { x: 72.0, y: 720.0, width: 10.0, height: 200.0 };
+    let tiny_rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 10.0,
+        height: 200.0,
+    };
     let result = doc.fit_textflow(&mut tf, &tiny_rect).unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
@@ -482,7 +499,12 @@ fn word_break_does_not_affect_normal_words() {
     let mut tf = TextFlow::new();
     tf.add_text("Hello world", &TextStyle::default());
 
-    let rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 200.0 };
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 200.0,
+    };
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
@@ -503,7 +525,12 @@ fn break_all_multi_page_cursor_is_consistent() {
     tf.add_text("WWWWWWWWWWWWWWWWWWWWWWWWWW", &TextStyle::default());
 
     // A box that only fits ~2 lines of text.
-    let small_box = Rect { x: 72.0, y: 720.0, width: 60.0, height: 30.0 };
+    let small_box = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 60.0,
+        height: 30.0,
+    };
 
     let mut doc = make_doc();
 
@@ -522,7 +549,11 @@ fn break_all_multi_page_cursor_is_consistent() {
 
     // At least the first call should return BoxFull (more text remains),
     // and eventually a Stop should be produced.
-    assert_eq!(r1, FitResult::BoxFull, "first page should be full, not all placed");
+    assert_eq!(
+        r1,
+        FitResult::BoxFull,
+        "first page should be full, not all placed"
+    );
     let finished = r2 == FitResult::Stop || r3 == FitResult::Stop;
     assert!(finished, "text should eventually be fully placed");
 }

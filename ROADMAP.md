@@ -86,7 +86,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Read / parse PDF | 🔲 Future | Foundation for all read-side features |
+| Read / parse PDF | ✅ Implemented | Basic: page count + version. xref streams (PDF 1.5+) planned |
 | Extract form fields | 🔲 Future | Depends on read/parse |
 | Merge multiple PDFs | 🔲 Future | Depends on read/parse |
 | Split PDF | 🔲 Future | Depends on read/parse |

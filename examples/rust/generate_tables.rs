@@ -49,12 +49,26 @@ fn db_rows() -> Vec<Row> {
     let row_bg_even = Color::rgb(0.95, 0.97, 1.0);
     let row_bg_odd = Color::rgb(1.0, 1.0, 1.0);
 
-    let departments = ["Engineering", "Marketing", "Sales", "HR", "Finance", "Operations"];
+    let departments = [
+        "Engineering",
+        "Marketing",
+        "Sales",
+        "HR",
+        "Finance",
+        "Operations",
+    ];
     let statuses = ["Active", "Inactive", "Pending", "Suspended", "Active"];
     let names = [
-        "Alice Johnson", "Bob Smith", "Carol White", "David Brown",
-        "Emma Davis", "Frank Miller", "Grace Wilson", "Henry Moore",
-        "Iris Taylor", "Jack Anderson",
+        "Alice Johnson",
+        "Bob Smith",
+        "Carol White",
+        "David Brown",
+        "Emma Davis",
+        "Frank Miller",
+        "Grace Wilson",
+        "Henry Moore",
+        "Iris Taylor",
+        "Jack Anderson",
     ];
 
     (0..160_usize)
@@ -73,7 +87,12 @@ fn db_rows() -> Vec<Row> {
 }
 
 fn new_page_rect() -> Rect {
-    Rect { x: MARGIN, y: TABLE_TOP, width: TABLE_WIDTH, height: TABLE_HEIGHT }
+    Rect {
+        x: MARGIN,
+        y: TABLE_TOP,
+        width: TABLE_WIDTH,
+        height: TABLE_HEIGHT,
+    }
 }
 
 fn main() {
@@ -96,7 +115,10 @@ fn main() {
     while rows_iter.peek().is_some() {
         // Repeat header at the top of every page.
         if cursor.is_first_row() {
-            match doc.fit_row(&table, &header_row(), &mut cursor).expect("fit_row header") {
+            match doc
+                .fit_row(&table, &header_row(), &mut cursor)
+                .expect("fit_row header")
+            {
                 FitResult::BoxEmpty => {
                     eprintln!("Warning: bounding box too small to fit header row");
                     break;

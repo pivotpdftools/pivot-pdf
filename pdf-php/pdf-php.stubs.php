@@ -594,3 +594,48 @@ class PdfDocument
      */
     public function endDocument(): ?string {}
 }
+
+/**
+ * Read an existing PDF file.
+ *
+ * Parses the PDF cross-reference table and page tree to report
+ * basic document properties. The raw bytes are retained internally
+ * for future features such as field extraction and merging.
+ *
+ * **Limitation:** PDF 1.5+ cross-reference streams are not yet supported.
+ */
+class PdfReader
+{
+    /**
+     * Open a PDF from a file path.
+     *
+     * @param string $path Path to the PDF file
+     * @return self
+     * @throws \Exception on I/O error or if the file is not a valid PDF
+     */
+    public static function open(string $path): self {}
+
+    /**
+     * Parse a PDF from raw bytes.
+     *
+     * @param string $bytes Binary PDF data
+     * @return self
+     * @throws \Exception if the bytes are not a valid PDF
+     */
+    public static function fromBytes(string $bytes): self {}
+
+    /**
+     * Number of pages in the document.
+     *
+     * @return int
+     */
+    public function pageCount(): int {}
+
+    /**
+     * PDF version string (e.g. "1.7").
+     *
+     * @return string
+     */
+    public function pdfVersion(): string {}
+}
+

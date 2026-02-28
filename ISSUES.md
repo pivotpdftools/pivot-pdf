@@ -855,3 +855,37 @@ pattern of cloning styles per column already serves this purpose cleanly.
 complete
 
 ---
+
+# Issue 26: Basic PDF Read
+## Description
+Being able to read an existing PDF is an important feature and provides the base for future features such as extracing form fields and merging.
+
+This issue should show that we can open an existing pdf document and count the number of pages. Future Issues will enhance the behavior. However, the code should be designed to eventually allow read pdf documents to be edited.
+
+Questions:
+1. Which pdf versions should we support? Does it matter for reading?
+2. Some pdfs can be opened by viewers but are, in fact, structurally incorrect. Can we handle these cases and do everything possible to read the pdf?
+
+## Design Decisions
+- New `PdfReader` type in a new `reader.rs` module; stores raw bytes + xref offset map for future editing support.
+- Parsing strategy: scan backward from `%%EOF` for `startxref`, parse the traditional xref table, follow Catalog → Pages → `/Count`.
+- **Known limitation**: PDF 1.5+ cross-reference streams are not supported in this issue. Files using xref streams return `PdfReadError::XrefStreamNotSupported`. This is a future issue.
+- Structurally incorrect PDFs (missing/corrupt xref) return `PdfReadError::MalformedXref`. Linear fallback scanning is a future enhancement.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `pdf-core/src/reader.rs` — define `PdfReadError` enum and `PdfReader` struct skeleton; register module in `lib.rs`
+- [x] Task 3: Implement xref + trailer parsing utilities — `find_startxref()`, `parse_xref_table()`, `parse_trailer()` returning offset map and root reference
+- [x] Task 4: Implement minimal object resolver — `parse_object_at()` handles integers, names, references, and flat dictionaries at a byte offset (enough to follow Catalog → Pages → Count)
+- [x] Task 5: Implement `PdfReader::from_bytes(Vec<u8>)` and `PdfReader::open(path)` — wire up parsing; expose `page_count()` and `pdf_version()` accessors
+- [x] Task 6: Write tests in `pdf-core/tests/reader_test.rs` — round-trip (write N pages, read back, assert count); malformed input returns error; multi-page document
+- [x] Task 7: Export `PdfReader` and `PdfReadError` from `pdf-core/src/lib.rs`
+- [x] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) with `PdfReader` class (`open()`, `pageCount()`, `pdfVersion()`)
+- [x] Task 9: Update PHP stubs (`pdf-php/pdf-php.stubs.php`)
+- [x] Task 10: Create documentation `docs/features/pdf-read.md`
+- [x] Task 11: Add php and rust examples in the `/examples` directory to read the same files which are produced by the generate_tables.rs and generate_tables.php. The examples should simply output the number of pages found in the pdf file.
+
+## Status
+complete
+
+---

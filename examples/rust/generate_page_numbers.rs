@@ -11,7 +11,7 @@
 ///   cargo run --example generate_page_numbers -p pdf-examples
 ///
 /// Opens output at: examples/output/rust-page-numbers.pdf
-use pdf_core::{BuiltinFont, FontRef, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pdf_core::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
 
 const PAGE_WIDTH: f64 = 612.0;
 const PAGE_HEIGHT: f64 = 792.0;
@@ -55,10 +55,13 @@ fn main() {
     let mut flow = TextFlow::new();
     // Add enough content to fill several pages
     for i in 1..=8 {
-        flow.add_text(&format!("Section {}. ", i), &TextStyle {
-            font: FontRef::Builtin(BuiltinFont::HelveticaBold),
-            font_size: 12.0,
-        });
+        flow.add_text(
+            &format!("Section {}. ", i),
+            &TextStyle {
+                font: FontRef::Builtin(BuiltinFont::HelveticaBold),
+                font_size: 12.0,
+            },
+        );
         for _ in 0..4 {
             flow.add_text(lorem, &body_style);
         }
@@ -68,7 +71,10 @@ fn main() {
     // --- Pass 1: write all content pages ---
     loop {
         doc.begin_page(PAGE_WIDTH, PAGE_HEIGHT);
-        match doc.fit_textflow(&mut flow, &content_rect()).expect("fit_textflow") {
+        match doc
+            .fit_textflow(&mut flow, &content_rect())
+            .expect("fit_textflow")
+        {
             FitResult::Stop => {
                 doc.end_page().expect("end_page");
                 break;

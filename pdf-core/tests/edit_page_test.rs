@@ -91,8 +91,14 @@ fn open_page_adds_overlay_content_stream() {
     let bytes = doc.end_document().unwrap();
     let output = String::from_utf8_lossy(&bytes);
 
-    assert!(output.contains("(Main content) Tj"), "main content should be present");
-    assert!(output.contains("(Page 1 of 1) Tj"), "overlay content should be present");
+    assert!(
+        output.contains("(Main content) Tj"),
+        "main content should be present"
+    );
+    assert!(
+        output.contains("(Page 1 of 1) Tj"),
+        "overlay content should be present"
+    );
 }
 
 #[test]
@@ -279,7 +285,12 @@ fn page_numbering_use_case() {
         doc.begin_page(612.0, 792.0);
         let mut flow = TextFlow::new();
         flow.add_text(&format!("Content for page {}", i), &style);
-        let rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 648.0 };
+        let rect = Rect {
+            x: 72.0,
+            y: 720.0,
+            width: 468.0,
+            height: 648.0,
+        };
         doc.fit_textflow(&mut flow, &rect).unwrap();
         doc.end_page().unwrap();
     }
@@ -334,10 +345,19 @@ fn overlay_on_multiple_different_pages() {
     assert!(output.contains("(Page 1 body) Tj"), "page 1 body missing");
     assert!(output.contains("(Page 2 body) Tj"), "page 2 body missing");
     assert!(output.contains("(Page 3 body) Tj"), "page 3 body missing");
-    assert!(output.contains("(Overlay on page 2) Tj"), "page 2 overlay missing");
-    assert!(output.contains("(Overlay on page 3) Tj"), "page 3 overlay missing");
+    assert!(
+        output.contains("(Overlay on page 2) Tj"),
+        "page 2 overlay missing"
+    );
+    assert!(
+        output.contains("(Overlay on page 3) Tj"),
+        "page 3 overlay missing"
+    );
     // Page 1 has no overlay so no /Contents array for it; pages 2 and 3 do
-    assert!(output.contains("/Contents ["), "pages with overlays should have array");
+    assert!(
+        output.contains("/Contents ["),
+        "pages with overlays should have array"
+    );
 }
 
 // -------------------------------------------------------
@@ -359,7 +379,12 @@ fn overlay_images_included_in_page_resources() {
     doc.open_page(1).unwrap();
     doc.place_image(
         &image_id,
-        &Rect { x: 72.0, y: 100.0, width: 100.0, height: 100.0 },
+        &Rect {
+            x: 72.0,
+            y: 100.0,
+            width: 100.0,
+            height: 100.0,
+        },
         ImageFit::Fit,
     );
     doc.end_page().unwrap();
@@ -368,9 +393,18 @@ fn overlay_images_included_in_page_resources() {
     let output = String::from_utf8_lossy(&bytes);
 
     // The image XObject name (Im1) should appear in the page's resources
-    assert!(output.contains("/XObject"), "XObject resource dict should be present");
-    assert!(output.contains("/Im1"), "image name Im1 should be in resources");
-    assert!(output.contains("/Im1 Do"), "image should be painted with Do operator");
+    assert!(
+        output.contains("/XObject"),
+        "XObject resource dict should be present"
+    );
+    assert!(
+        output.contains("/Im1"),
+        "image name Im1 should be in resources"
+    );
+    assert!(
+        output.contains("/Im1 Do"),
+        "image should be painted with Do operator"
+    );
 }
 
 // -------------------------------------------------------
@@ -398,6 +432,9 @@ fn overlay_fonts_included_in_page_resources() {
     let output = String::from_utf8_lossy(&bytes);
 
     // Both fonts should be in the output
-    assert!(output.contains("/Helvetica"), "Helvetica should be referenced");
+    assert!(
+        output.contains("/Helvetica"),
+        "Helvetica should be referenced"
+    );
     assert!(output.contains("/Courier"), "Courier should be referenced");
 }

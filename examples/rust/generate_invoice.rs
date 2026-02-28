@@ -20,23 +20,40 @@ const RIGHT: f64 = PAGE_W - MARGIN; // 540.0
 // ── font helpers ──────────────────────────────────────────────────────────────
 
 fn bold(sz: f64) -> TextStyle {
-    TextStyle { font: FontRef::Builtin(BuiltinFont::HelveticaBold), font_size: sz }
+    TextStyle {
+        font: FontRef::Builtin(BuiltinFont::HelveticaBold),
+        font_size: sz,
+    }
 }
 
 fn regular(sz: f64) -> TextStyle {
-    TextStyle { font: FontRef::Builtin(BuiltinFont::Helvetica), font_size: sz }
+    TextStyle {
+        font: FontRef::Builtin(BuiltinFont::Helvetica),
+        font_size: sz,
+    }
 }
 
 fn oblique(sz: f64) -> TextStyle {
-    TextStyle { font: FontRef::Builtin(BuiltinFont::HelveticaOblique), font_size: sz }
+    TextStyle {
+        font: FontRef::Builtin(BuiltinFont::HelveticaOblique),
+        font_size: sz,
+    }
 }
 
 // ── color helpers ─────────────────────────────────────────────────────────────
 
-fn navy() -> Color { Color::rgb(0.118, 0.227, 0.373) }
-fn teal() -> Color { Color::rgb(0.0, 0.706, 0.847) }
-fn mid_gray() -> Color { Color::rgb(0.5, 0.5, 0.5) }
-fn stripe_bg() -> Color { Color::rgb(0.95, 0.97, 1.0) }
+fn navy() -> Color {
+    Color::rgb(0.118, 0.227, 0.373)
+}
+fn teal() -> Color {
+    Color::rgb(0.0, 0.706, 0.847)
+}
+fn mid_gray() -> Color {
+    Color::rgb(0.5, 0.5, 0.5)
+}
+fn stripe_bg() -> Color {
+    Color::rgb(0.95, 0.97, 1.0)
+}
 
 // ── currency formatting ───────────────────────────────────────────────────────
 
@@ -73,17 +90,61 @@ impl LineItem {
 }
 
 const ITEMS: &[LineItem] = &[
-    LineItem { description: "Web Development Services",     qty: 40, unit_price: 150.00 },
-    LineItem { description: "UI/UX Design",                 qty: 20, unit_price: 125.00 },
-    LineItem { description: "Server Setup & Configuration",  qty:  1, unit_price: 500.00 },
-    LineItem { description: "Monthly Maintenance",           qty:  3, unit_price: 200.00 },
-    LineItem { description: "Brand Identity & Style Guide",  qty:  1, unit_price: 2_500.00 },
-    LineItem { description: "SEO Optimization Package",      qty:  1, unit_price: 800.00 },
-    LineItem { description: "CMS Training Sessions",         qty:  4, unit_price: 150.00 },
-    LineItem { description: "Cloud Infrastructure Setup",    qty:  1, unit_price: 1_200.00 },
-    LineItem { description: "Security Audit",                qty:  1, unit_price: 1_500.00 },
-    LineItem { description: "Mobile App Development",        qty: 80, unit_price: 150.00 },
-    LineItem { description: "Annual Support Contract",       qty:  1, unit_price: 3_600.00 },
+    LineItem {
+        description: "Web Development Services",
+        qty: 40,
+        unit_price: 150.00,
+    },
+    LineItem {
+        description: "UI/UX Design",
+        qty: 20,
+        unit_price: 125.00,
+    },
+    LineItem {
+        description: "Server Setup & Configuration",
+        qty: 1,
+        unit_price: 500.00,
+    },
+    LineItem {
+        description: "Monthly Maintenance",
+        qty: 3,
+        unit_price: 200.00,
+    },
+    LineItem {
+        description: "Brand Identity & Style Guide",
+        qty: 1,
+        unit_price: 2_500.00,
+    },
+    LineItem {
+        description: "SEO Optimization Package",
+        qty: 1,
+        unit_price: 800.00,
+    },
+    LineItem {
+        description: "CMS Training Sessions",
+        qty: 4,
+        unit_price: 150.00,
+    },
+    LineItem {
+        description: "Cloud Infrastructure Setup",
+        qty: 1,
+        unit_price: 1_200.00,
+    },
+    LineItem {
+        description: "Security Audit",
+        qty: 1,
+        unit_price: 1_500.00,
+    },
+    LineItem {
+        description: "Mobile App Development",
+        qty: 80,
+        unit_price: 150.00,
+    },
+    LineItem {
+        description: "Annual Support Contract",
+        qty: 1,
+        unit_price: 3_600.00,
+    },
 ];
 
 // ── logo ──────────────────────────────────────────────────────────────────────
@@ -112,10 +173,22 @@ fn draw_logo<W: std::io::Write>(doc: &mut PdfDocument<W>) {
     doc.set_fill_color(mid_gray());
     doc.place_text_styled(
         "456 Innovation Drive, Suite 200",
-        MARGIN + 54.0, 753.0, &regular(9.0),
+        MARGIN + 54.0,
+        753.0,
+        &regular(9.0),
     );
-    doc.place_text_styled("San Francisco, CA 94102",        MARGIN + 54.0, 742.0, &regular(9.0));
-    doc.place_text_styled("info@novapeak.io  |  (415) 555-9200", MARGIN + 54.0, 731.0, &regular(9.0));
+    doc.place_text_styled(
+        "San Francisco, CA 94102",
+        MARGIN + 54.0,
+        742.0,
+        &regular(9.0),
+    );
+    doc.place_text_styled(
+        "info@novapeak.io  |  (415) 555-9200",
+        MARGIN + 54.0,
+        731.0,
+        &regular(9.0),
+    );
     doc.restore_state();
 }
 
@@ -125,9 +198,9 @@ fn draw_invoice_header<W: std::io::Write>(doc: &mut PdfDocument<W>) {
     doc.place_text_styled("INVOICE", 392.0, 766.0, &bold(22.0));
 
     let rows: &[(&str, &str, f64)] = &[
-        ("Invoice #:", "INV-2024-0042",     748.0),
-        ("Date:",      "January 15, 2024",  736.0),
-        ("Due Date:",  "February 15, 2024", 724.0),
+        ("Invoice #:", "INV-2024-0042", 748.0),
+        ("Date:", "January 15, 2024", 736.0),
+        ("Due Date:", "February 15, 2024", 724.0),
     ];
     for &(label, value, y) in rows {
         doc.save_state();
@@ -162,9 +235,9 @@ fn draw_bill_to<W: std::io::Write>(doc: &mut PdfDocument<W>) {
 
     doc.save_state();
     doc.set_fill_color(mid_gray());
-    doc.place_text_styled("123 Business Ave",   MARGIN, 682.0, &regular(9.0));
+    doc.place_text_styled("123 Business Ave", MARGIN, 682.0, &regular(9.0));
     doc.place_text_styled("New York, NY 10001", MARGIN, 671.0, &regular(9.0));
-    doc.place_text_styled("accounts@acme.com",  MARGIN, 660.0, &regular(9.0));
+    doc.place_text_styled("accounts@acme.com", MARGIN, 660.0, &regular(9.0));
     doc.restore_state();
 }
 
@@ -178,7 +251,12 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
     let mut table = Table::new(vec![250.0, 50.0, 90.0, 78.0]);
     table.border_color = Color::rgb(0.75, 0.75, 0.75);
 
-    let rect = Rect { x: MARGIN, y: 638.0, width: 468.0, height: 420.0 };
+    let rect = Rect {
+        x: MARGIN,
+        y: 638.0,
+        width: 468.0,
+        height: 420.0,
+    };
     let mut cursor = TableCursor::new(&rect);
 
     // Header row — Qty, Unit Price, Total are right-aligned to match data columns.
@@ -190,14 +268,18 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
         padding: 5.0,
         ..CellStyle::default()
     };
-    let hs_right = CellStyle { text_align: TextAlign::Right, ..hs.clone() };
+    let hs_right = CellStyle {
+        text_align: TextAlign::Right,
+        ..hs.clone()
+    };
     let header = Row::new(vec![
         Cell::styled("DESCRIPTION", hs),
-        Cell::styled("QTY",         hs_right.clone()),
-        Cell::styled("UNIT PRICE",  hs_right.clone()),
-        Cell::styled("TOTAL",       hs_right),
+        Cell::styled("QTY", hs_right.clone()),
+        Cell::styled("UNIT PRICE", hs_right.clone()),
+        Cell::styled("TOTAL", hs_right),
     ]);
-    doc.fit_row(&table, &header, &mut cursor).expect("fit_row header");
+    doc.fit_row(&table, &header, &mut cursor)
+        .expect("fit_row header");
 
     // Data rows — description is left-aligned; numeric columns are right-aligned.
     for (i, item) in ITEMS.iter().enumerate() {
@@ -208,14 +290,20 @@ fn draw_line_items<W: std::io::Write>(doc: &mut PdfDocument<W>) -> f64 {
             padding: 5.0,
             ..CellStyle::default()
         };
-        let ds_right = CellStyle { text_align: TextAlign::Right, ..ds.clone() };
+        let ds_right = CellStyle {
+            text_align: TextAlign::Right,
+            ..ds.clone()
+        };
         let row = Row::new(vec![
-            Cell::styled(item.description,            ds),
-            Cell::styled(&item.qty.to_string(),       ds_right.clone()),
+            Cell::styled(item.description, ds),
+            Cell::styled(&item.qty.to_string(), ds_right.clone()),
             Cell::styled(&fmt_money(item.unit_price), ds_right.clone()),
-            Cell::styled(&fmt_money(item.total()),    ds_right),
+            Cell::styled(&fmt_money(item.total()), ds_right),
         ]);
-        match doc.fit_row(&table, &row, &mut cursor).expect("fit_row item") {
+        match doc
+            .fit_row(&table, &row, &mut cursor)
+            .expect("fit_row item")
+        {
             FitResult::BoxFull | FitResult::BoxEmpty => {
                 eprintln!("Warning: table unexpectedly full at row {}", i + 1);
                 break;
@@ -254,7 +342,12 @@ fn draw_totals<W: std::io::Write>(doc: &mut PdfDocument<W>, table_bottom: f64) {
     doc.stroke();
     doc.restore_state();
 
-    let rect = Rect { x: 362.0, y: sep_y, width: 178.0, height: 200.0 };
+    let rect = Rect {
+        x: 362.0,
+        y: sep_y,
+        width: 178.0,
+        height: 200.0,
+    };
     let mut cursor = TableCursor::new(&rect);
 
     // Base style: 9pt Helvetica, right-aligned, 5pt padding.
@@ -266,23 +359,39 @@ fn draw_totals<W: std::io::Write>(doc: &mut PdfDocument<W>, table_bottom: f64) {
         text_align: TextAlign::Right,
         ..CellStyle::default()
     };
-    let gray_label  = CellStyle { text_color: Some(mid_gray()), ..base.clone() };
-    let total_label = CellStyle { font: FontRef::Builtin(BuiltinFont::HelveticaBold), ..base.clone() };
-    let total_amt   = CellStyle {
+    let gray_label = CellStyle {
+        text_color: Some(mid_gray()),
+        ..base.clone()
+    };
+    let total_label = CellStyle {
+        font: FontRef::Builtin(BuiltinFont::HelveticaBold),
+        ..base.clone()
+    };
+    let total_amt = CellStyle {
         font: FontRef::Builtin(BuiltinFont::HelveticaBold),
         text_color: Some(navy()),
         ..base.clone()
     };
 
-    doc.fit_row(&totals_table, &Row::new(vec![
-        Cell::styled("Subtotal:", gray_label.clone()),
-        Cell::styled(&fmt_money(subtotal), base.clone()),
-    ]), &mut cursor).expect("fit_row subtotal");
+    doc.fit_row(
+        &totals_table,
+        &Row::new(vec![
+            Cell::styled("Subtotal:", gray_label.clone()),
+            Cell::styled(&fmt_money(subtotal), base.clone()),
+        ]),
+        &mut cursor,
+    )
+    .expect("fit_row subtotal");
 
-    doc.fit_row(&totals_table, &Row::new(vec![
-        Cell::styled(&format!("Tax ({:.0}%):", tax_rate * 100.0), gray_label),
-        Cell::styled(&fmt_money(tax), base),
-    ]), &mut cursor).expect("fit_row tax");
+    doc.fit_row(
+        &totals_table,
+        &Row::new(vec![
+            Cell::styled(&format!("Tax ({:.0}%):", tax_rate * 100.0), gray_label),
+            Cell::styled(&fmt_money(tax), base),
+        ]),
+        &mut cursor,
+    )
+    .expect("fit_row tax");
 
     // Bold navy rule between tax and total.
     let rule_y = cursor.current_y();
@@ -294,10 +403,15 @@ fn draw_totals<W: std::io::Write>(doc: &mut PdfDocument<W>, table_bottom: f64) {
     doc.stroke();
     doc.restore_state();
 
-    doc.fit_row(&totals_table, &Row::new(vec![
-        Cell::styled("TOTAL:", total_label),
-        Cell::styled(&fmt_money(total), total_amt),
-    ]), &mut cursor).expect("fit_row total");
+    doc.fit_row(
+        &totals_table,
+        &Row::new(vec![
+            Cell::styled("TOTAL:", total_label),
+            Cell::styled(&fmt_money(total), total_amt),
+        ]),
+        &mut cursor,
+    )
+    .expect("fit_row total");
 }
 
 // ── footer ────────────────────────────────────────────────────────────────────
@@ -309,7 +423,9 @@ fn draw_footer<W: std::io::Write>(doc: &mut PdfDocument<W>) {
     doc.set_fill_color(mid_gray());
     doc.place_text_styled(
         "Payment Terms: Net 30  |  Please make checks payable to NovaPeak Solutions",
-        MARGIN, 94.0, &regular(8.0),
+        MARGIN,
+        94.0,
+        &regular(8.0),
     );
     doc.restore_state();
 

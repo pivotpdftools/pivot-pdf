@@ -440,7 +440,14 @@ fn wrap_text(
 ) -> Vec<String> {
     let mut lines: Vec<String> = Vec::new();
     for para in text.split('\n') {
-        wrap_paragraph(para.trim(), avail_width, style, word_break, tt_fonts, &mut lines);
+        wrap_paragraph(
+            para.trim(),
+            avail_width,
+            style,
+            word_break,
+            tt_fonts,
+            &mut lines,
+        );
     }
     if lines.is_empty() {
         lines.push(String::new());
@@ -478,10 +485,29 @@ fn wrap_paragraph(
             current_line = String::new();
             line_width = 0.0;
             // Fall through to place word on fresh line (may need breaking).
-            place_word_on_line(word, avail_width, style, word_break, tt_fonts, &mut current_line, &mut line_width, out);
-        } else if word_w > avail_width && word_break != WordBreak::Normal && current_line.is_empty() {
+            place_word_on_line(
+                word,
+                avail_width,
+                style,
+                word_break,
+                tt_fonts,
+                &mut current_line,
+                &mut line_width,
+                out,
+            );
+        } else if word_w > avail_width && word_break != WordBreak::Normal && current_line.is_empty()
+        {
             // Fresh line, word is too wide — break it.
-            place_word_on_line(word, avail_width, style, word_break, tt_fonts, &mut current_line, &mut line_width, out);
+            place_word_on_line(
+                word,
+                avail_width,
+                style,
+                word_break,
+                tt_fonts,
+                &mut current_line,
+                &mut line_width,
+                out,
+            );
         } else {
             if !current_line.is_empty() {
                 current_line.push(' ');
@@ -772,7 +798,9 @@ fn render_cell(
     // Always set an explicit fill color for text. Without this, the fill
     // color from background drawing (set outside q/Q) would bleed into
     // text rendering, making text invisible on colored backgrounds.
-    let text_color = style.text_color.unwrap_or_else(|| Color::rgb(0.0, 0.0, 0.0));
+    let text_color = style
+        .text_color
+        .unwrap_or_else(|| Color::rgb(0.0, 0.0, 0.0));
     output.extend_from_slice(
         format!(
             "{} {} {} rg\n",
@@ -796,7 +824,12 @@ fn render_cell(
         let line_x = aligned_x(line, align, cell_x, col_width, style.padding, &ts, tt_fonts);
         if i == 0 {
             output.extend_from_slice(
-                format!("{} {} Td\n", format_coord(line_x), format_coord(first_line_y)).as_bytes(),
+                format!(
+                    "{} {} Td\n",
+                    format_coord(line_x),
+                    format_coord(first_line_y)
+                )
+                .as_bytes(),
             );
         } else {
             let dx = line_x - current_x;
@@ -837,7 +870,9 @@ fn shrink_font_size(
         let lines = count_lines(text, avail_width, &ts, word_break, tt_fonts);
         let fits_height = lines as f64 * lh <= avail_height;
         let fits_width = word_break != WordBreak::Normal
-            || text.split_whitespace().all(|w| measure_word(w, &ts, tt_fonts) <= avail_width);
+            || text
+                .split_whitespace()
+                .all(|w| measure_word(w, &ts, tt_fonts) <= avail_width);
         if (fits_height && fits_width) || font_size <= MIN_FONT_SIZE {
             break;
         }

@@ -363,7 +363,10 @@ fn break_wide_words(
             continue;
         }
 
-        let ts = TextStyle { font: word.style.font, font_size: word.style.font_size };
+        let ts = TextStyle {
+            font: word.style.font,
+            font_size: word.style.font_size,
+        };
         let pieces = break_word(&word.text, max_width, &ts, mode, tt_fonts);
         let leading_space = word.leading_space;
 
@@ -552,7 +555,11 @@ mod break_word_tests {
         let avail = w("ww"); // force a split
         let pieces = break_word("wwww", avail, &style, WordBreak::BreakAll, &[]);
         for piece in &pieces {
-            assert!(!piece.ends_with('-'), "BreakAll should not add hyphens, got: {:?}", pieces);
+            assert!(
+                !piece.ends_with('-'),
+                "BreakAll should not add hyphens, got: {:?}",
+                pieces
+            );
         }
     }
 
@@ -581,9 +588,17 @@ mod break_word_tests {
         // Every piece except the last must end with '-'.
         let (last, rest) = pieces.split_last().unwrap();
         for piece in rest {
-            assert!(piece.ends_with('-'), "non-last piece should end with '-', got: {:?}", piece);
+            assert!(
+                piece.ends_with('-'),
+                "non-last piece should end with '-', got: {:?}",
+                piece
+            );
         }
-        assert!(!last.ends_with('-'), "last piece must not end with '-', got: {:?}", last);
+        assert!(
+            !last.ends_with('-'),
+            "last piece must not end with '-', got: {:?}",
+            last
+        );
     }
 
     #[test]
@@ -619,7 +634,9 @@ mod break_word_tests {
             assert!(
                 piece_w <= avail + f64::EPSILON,
                 "piece {:?} ({:.3}pt) exceeds avail ({:.3}pt)",
-                piece, piece_w, avail
+                piece,
+                piece_w,
+                avail
             );
         }
     }

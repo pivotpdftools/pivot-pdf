@@ -114,10 +114,7 @@ fn rgba_png_produces_smask() {
     );
     // The SMask should be a DeviceGray image
     let smask_count = output.matches("/ColorSpace /DeviceGray").count();
-    assert!(
-        smask_count >= 1,
-        "SMask should use DeviceGray color space"
-    );
+    assert!(smask_count >= 1, "SMask should use DeviceGray color space");
 }
 
 // -------------------------------------------------------
@@ -235,10 +232,7 @@ fn none_mode_uses_natural_size() {
             .unwrap_or("no cm found")
     );
     // None mode should NOT have clipping
-    assert!(
-        !output.contains("re W n"),
-        "None mode should not clip"
-    );
+    assert!(!output.contains("re W n"), "None mode should not clip");
 }
 
 // -------------------------------------------------------

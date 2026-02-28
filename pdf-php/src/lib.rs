@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 
 use ext_php_rs::prelude::*;
-use ext_php_rs::types::{Zval};
+use ext_php_rs::types::Zval;
 
 use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, ImageFit, ImageId,
-    PdfDocument, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId,
-    WordBreak,
+    PdfDocument, PdfReader, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle,
+    TrueTypeFontId, WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -313,9 +313,8 @@ impl PhpCellStyle {
         let font = if self.font_handle >= 0 {
             FontRef::TrueType(TrueTypeFontId(self.font_handle as usize))
         } else {
-            let builtin = BuiltinFont::from_name(&self.font_name).ok_or_else(|| {
-                format!("Unknown font: '{}'", self.font_name)
-            })?;
+            let builtin = BuiltinFont::from_name(&self.font_name)
+                .ok_or_else(|| format!("Unknown font: '{}'", self.font_name))?;
             FontRef::Builtin(builtin)
         };
 
@@ -417,13 +416,16 @@ pub struct PhpRow {
 #[php_impl]
 impl PhpRow {
     pub fn __construct(cells: Vec<&PhpCell>) -> Self {
-        let core_cells = cells.into_iter().map(|c| {
-            let cell = PhpCell {
-                text: c.text.clone(),
-                style: c.style.clone(),
-            };
-            cell.to_core()
-        }).collect();
+        let core_cells = cells
+            .into_iter()
+            .map(|c| {
+                let cell = PhpCell {
+                    text: c.text.clone(),
+                    style: c.style.clone(),
+                };
+                cell.to_core()
+            })
+            .collect();
 
         PhpRow {
             cells: core_cells,
@@ -877,7 +879,10 @@ impl PhpPdfDocument {
     /// automatically closed first.
     pub fn open_page(&mut self, page_num: i64) -> Result<(), String> {
         if page_num < 1 {
-            return Err(format!("open_page: page_num must be >= 1, got {}", page_num));
+            return Err(format!(
+                "open_page: page_num must be >= 1, got {}",
+                page_num
+            ));
         }
         with_doc!(self, open_page, doc => {
             doc.open_page(page_num as usize)
@@ -924,6 +929,58 @@ impl PhpPdfDocument {
     }
 }
 
+// ----------------------------------------------------------
+// PdfReader
+// ----------------------------------------------------------
+
+/// PHP class: PdfReader
+///
+/// Opens an existing PDF and reports basic document properties.
+///
+/// ```php
+/// $reader = PdfReader::open("document.pdf");
+/// echo $reader->pageCount();  // number of pages
+/// echo $reader->pdfVersion(); // e.g. "1.7"
+/// ```
+#[php_class]
+#[php(name = "PdfReader")]
+pub struct PhpPdfReader {
+    page_count: usize,
+    version: String,
+}
+
+#[php_impl]
+impl PhpPdfReader {
+    /// Open a PDF from a file path.
+    pub fn open(path: &str) -> Result<Self, String> {
+        let reader = PdfReader::open(path).map_err(|e| format!("PdfReader::open failed: {}", e))?;
+        Ok(PhpPdfReader {
+            page_count: reader.page_count(),
+            version: reader.pdf_version().to_string(),
+        })
+    }
+
+    /// Parse a PDF from raw bytes.
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, String> {
+        let reader = PdfReader::from_bytes(bytes)
+            .map_err(|e| format!("PdfReader::from_bytes failed: {}", e))?;
+        Ok(PhpPdfReader {
+            page_count: reader.page_count(),
+            version: reader.pdf_version().to_string(),
+        })
+    }
+
+    /// Number of pages in the document.
+    pub fn page_count(&self) -> i64 {
+        self.page_count as i64
+    }
+
+    /// PDF version string (e.g. `"1.7"`).
+    pub fn pdf_version(&self) -> String {
+        self.version.clone()
+    }
+}
+
 fn parse_image_fit(s: &str) -> Result<ImageFit, String> {
     match s {
         "fit" => Ok(ImageFit::Fit),
@@ -950,4 +1007,5 @@ pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
         .class::<PhpTable>()
         .class::<PhpTableCursor>()
         .class::<PhpPdfDocument>()
+        .class::<PhpPdfReader>()
 }

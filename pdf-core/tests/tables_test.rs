@@ -1,6 +1,6 @@
 use pdf_core::{
-    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect,
-    Row, Table, TableCursor, TextAlign, WordBreak,
+    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
+    Table, TableCursor, TextAlign, WordBreak,
 };
 
 /// Check whether a byte pattern exists in the buffer.
@@ -13,7 +13,12 @@ fn make_doc() -> PdfDocument<Vec<u8>> {
 }
 
 fn full_rect() -> Rect {
-    Rect { x: 72.0, y: 720.0, width: 468.0, height: 648.0 }
+    Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 648.0,
+    }
 }
 
 fn two_col_table() -> Table {
@@ -34,7 +39,9 @@ fn single_row_returns_stop() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    let result = doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    let result = doc
+        .fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
     assert_eq!(result, FitResult::Stop);
@@ -46,7 +53,8 @@ fn single_row_produces_valid_pdf() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("Name", "Value"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("Name", "Value"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -88,7 +96,8 @@ fn is_first_row_false_after_successful_placement() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
     assert!(!cursor.is_first_row());
@@ -100,7 +109,8 @@ fn reset_restores_is_first_row() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
 
@@ -116,12 +126,19 @@ fn reset_restores_is_first_row() {
 #[test]
 fn box_empty_when_rect_too_small() {
     // Row height ~18pt, rect height only 5pt
-    let tiny = Rect { x: 72.0, y: 720.0, width: 468.0, height: 5.0 };
+    let tiny = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 5.0,
+    };
     let table = two_col_table();
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&tiny);
-    let result = doc.fit_row(&table, &data_row("X", "Y"), &mut cursor).unwrap();
+    let result = doc
+        .fit_row(&table, &data_row("X", "Y"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
 
@@ -133,7 +150,12 @@ fn box_empty_when_rect_too_small() {
 #[test]
 fn box_full_when_page_has_content_and_row_does_not_fit() {
     // Rect tall enough for exactly ~3 rows (each ~18pt, rect 50pt)
-    let short_rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 50.0 };
+    let short_rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 50.0,
+    };
     let table = two_col_table();
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
@@ -143,16 +165,25 @@ fn box_full_when_page_has_content_and_row_does_not_fit() {
     let mut placed = 0;
     let mut got_box_full = false;
     for _ in 0..10 {
-        match doc.fit_row(&table, &data_row("Row", "Data"), &mut cursor).unwrap() {
-            FitResult::Stop    => placed += 1,
-            FitResult::BoxFull => { got_box_full = true; break; }
+        match doc
+            .fit_row(&table, &data_row("Row", "Data"), &mut cursor)
+            .unwrap()
+        {
+            FitResult::Stop => placed += 1,
+            FitResult::BoxFull => {
+                got_box_full = true;
+                break;
+            }
             FitResult::BoxEmpty => panic!("unexpected BoxEmpty"),
         }
     }
     doc.end_page().unwrap();
     doc.end_document().unwrap();
 
-    assert!(placed > 0, "expected at least one row placed before BoxFull");
+    assert!(
+        placed > 0,
+        "expected at least one row placed before BoxFull"
+    );
     assert!(got_box_full);
     // After BoxFull, is_first_row is false (rows were placed)
     assert!(!cursor.is_first_row());
@@ -164,7 +195,12 @@ fn box_full_when_page_has_content_and_row_does_not_fit() {
 
 #[test]
 fn multi_page_streaming_loop() {
-    let small_rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 60.0 };
+    let small_rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 60.0,
+    };
     let table = two_col_table();
     let rows: Vec<Row> = (0..15)
         .map(|i| data_row(&format!("Row {}", i), "data"))
@@ -180,9 +216,14 @@ fn multi_page_streaming_loop() {
         pages += 1;
         while let Some(row) = iter.peek() {
             match doc.fit_row(&table, row, &mut cursor).unwrap() {
-                FitResult::Stop    => { iter.next(); }
+                FitResult::Stop => {
+                    iter.next();
+                }
                 FitResult::BoxFull => break,
-                FitResult::BoxEmpty => { iter.next(); break; }
+                FitResult::BoxEmpty => {
+                    iter.next();
+                    break;
+                }
             }
         }
         doc.end_page().unwrap();
@@ -198,7 +239,12 @@ fn multi_page_streaming_loop() {
 
 #[test]
 fn header_repeated_on_each_page_via_is_first_row() {
-    let small_rect = Rect { x: 72.0, y: 720.0, width: 468.0, height: 60.0 };
+    let small_rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 468.0,
+        height: 60.0,
+    };
     let table = two_col_table();
     let header = data_row("Name", "Value");
     let data: Vec<Row> = (0..12)
@@ -221,9 +267,14 @@ fn header_repeated_on_each_page_via_is_first_row() {
 
         while let Some(row) = iter.peek() {
             match doc.fit_row(&table, row, &mut cursor).unwrap() {
-                FitResult::Stop    => { iter.next(); }
+                FitResult::Stop => {
+                    iter.next();
+                }
                 FitResult::BoxFull => break,
-                FitResult::BoxEmpty => { iter.next(); break; }
+                FitResult::BoxEmpty => {
+                    iter.next();
+                    break;
+                }
             }
         }
 
@@ -235,7 +286,8 @@ fn header_repeated_on_each_page_via_is_first_row() {
 
     let bytes = doc.end_document().unwrap();
     // "Name" appears once per page
-    let count = bytes.windows(b"(Name) Tj".len())
+    let count = bytes
+        .windows(b"(Name) Tj".len())
         .filter(|w| *w == b"(Name) Tj")
         .count();
     assert!(pages >= 2);
@@ -252,7 +304,8 @@ fn borders_enabled_by_default() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -267,7 +320,8 @@ fn borders_disabled_when_width_zero() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -282,7 +336,8 @@ fn custom_border_color_is_emitted() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &data_row("A", "B"), &mut cursor).unwrap();
+    doc.fit_row(&table, &data_row("A", "B"), &mut cursor)
+        .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -345,7 +400,12 @@ fn cell_text_color_emits_rg_in_bt_block() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &Row::new(vec![Cell::styled("Colored", style)]), &mut cursor).unwrap();
+    doc.fit_row(
+        &table,
+        &Row::new(vec![Cell::styled("Colored", style)]),
+        &mut cursor,
+    )
+    .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -385,7 +445,11 @@ fn wrap_mode_multi_line_content_fits() {
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
     let result = doc
-        .fit_row(&table, &Row::new(vec![Cell::new(long_text.trim())]), &mut cursor)
+        .fit_row(
+            &table,
+            &Row::new(vec![Cell::new(long_text.trim())]),
+            &mut cursor,
+        )
         .unwrap();
     doc.end_page().unwrap();
     doc.end_document().unwrap();
@@ -394,7 +458,10 @@ fn wrap_mode_multi_line_content_fits() {
 
 #[test]
 fn clip_mode_with_fixed_row_height() {
-    let style = CellStyle { overflow: CellOverflow::Clip, ..CellStyle::default() };
+    let style = CellStyle {
+        overflow: CellOverflow::Clip,
+        ..CellStyle::default()
+    };
     let long_text = "word ".repeat(40);
     let mut row = Row::new(vec![Cell::styled(long_text.trim(), style)]);
     row.height = Some(25.0);
@@ -456,7 +523,10 @@ fn shrink_mode_shrinks_wide_single_word_when_word_break_is_normal() {
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
-    assert!(!contains(&bytes, b"14 Tf"), "font should have been shrunk below 14pt");
+    assert!(
+        !contains(&bytes, b"14 Tf"),
+        "font should have been shrunk below 14pt"
+    );
 }
 
 #[test]
@@ -492,7 +562,12 @@ fn cell_style_custom_font_is_used() {
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&full_rect());
-    doc.fit_row(&table, &Row::new(vec![Cell::styled("Bold", style)]), &mut cursor).unwrap();
+    doc.fit_row(
+        &table,
+        &Row::new(vec![Cell::styled("Bold", style)]),
+        &mut cursor,
+    )
+    .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
@@ -565,7 +640,10 @@ fn wrap_mode_breaks_long_word_in_narrow_cell() {
 
     assert_eq!(result, FitResult::Stop);
     // Multi-line output: at least one Td move-down operator.
-    assert!(contains(&bytes, b"0 -"), "expected multiple lines from word break");
+    assert!(
+        contains(&bytes, b"0 -"),
+        "expected multiple lines from word break"
+    );
 }
 
 #[test]
@@ -593,7 +671,11 @@ fn normal_word_break_does_not_split_wide_word_in_cell() {
     assert_eq!(result, FitResult::Stop);
     // Row height equals one line (single-line word, no break).
     let row_height = y_before - y_after;
-    assert!(row_height < 25.0, "expected single-line row height, got {}", row_height);
+    assert!(
+        row_height < 25.0,
+        "expected single-line row height, got {}",
+        row_height
+    );
 }
 
 #[test]
@@ -616,7 +698,10 @@ fn hyphenate_mode_emits_hyphen_in_cell() {
 
     // A hyphen at the end of a PDF literal string looks like `-)`.
     // Checking for `-) Tj` avoids false positives from negative coordinates.
-    assert!(contains(&bytes, b"-) Tj"), "hyphenate mode should emit a hyphen");
+    assert!(
+        contains(&bytes, b"-) Tj"),
+        "hyphenate mode should emit a hyphen"
+    );
 }
 
 #[test]
@@ -642,7 +727,11 @@ fn word_break_increases_cell_height_to_fit_all_pieces() {
 
     let row_height = y_before - y_after;
     // Expect at least 2 lines of text (each ~12pt) plus padding: > 24pt
-    assert!(row_height > 24.0, "row height should grow to fit broken word, got {}", row_height);
+    assert!(
+        row_height > 24.0,
+        "row height should grow to fit broken word, got {}",
+        row_height
+    );
 }
 
 // -------------------------------------------------------
@@ -672,43 +761,81 @@ fn default_cell_style_is_left_aligned() {
 #[test]
 fn left_aligned_td_starts_at_cell_x_plus_padding() {
     // Table x=72, col_width=200, padding=4 → expected x = 76.
-    let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+    let style = CellStyle {
+        text_align: TextAlign::Left,
+        ..CellStyle::default()
+    };
     let table = Table::new(vec![200.0]);
-    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 200.0,
+        height: 648.0,
+    };
     let mut doc = make_doc();
     doc.begin_page(612.0, 792.0);
     let mut cursor = TableCursor::new(&rect);
-    doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+    doc.fit_row(
+        &table,
+        &Row::new(vec![Cell::styled("Hi", style)]),
+        &mut cursor,
+    )
+    .unwrap();
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
 
     let x = first_td_x(&bytes).expect("should have a Td operator");
-    assert!((x - 76.0).abs() < 0.01, "left-aligned x should be 76, got {}", x);
+    assert!(
+        (x - 76.0).abs() < 0.01,
+        "left-aligned x should be 76, got {}",
+        x
+    );
 }
 
 #[test]
 fn right_aligned_td_x_is_greater_than_left() {
     // Right-aligned text starts further right than left-aligned for the same text.
     let table = Table::new(vec![200.0]);
-    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 200.0,
+        height: 648.0,
+    };
 
     let left_x = {
-        let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+        let style = CellStyle {
+            text_align: TextAlign::Left,
+            ..CellStyle::default()
+        };
         let mut doc = make_doc();
         doc.begin_page(612.0, 792.0);
         let mut cursor = TableCursor::new(&rect);
-        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.fit_row(
+            &table,
+            &Row::new(vec![Cell::styled("Hi", style)]),
+            &mut cursor,
+        )
+        .unwrap();
         doc.end_page().unwrap();
         let bytes = doc.end_document().unwrap();
         first_td_x(&bytes).expect("Td in left-aligned PDF")
     };
 
     let right_x = {
-        let style = CellStyle { text_align: TextAlign::Right, ..CellStyle::default() };
+        let style = CellStyle {
+            text_align: TextAlign::Right,
+            ..CellStyle::default()
+        };
         let mut doc = make_doc();
         doc.begin_page(612.0, 792.0);
         let mut cursor = TableCursor::new(&rect);
-        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.fit_row(
+            &table,
+            &Row::new(vec![Cell::styled("Hi", style)]),
+            &mut cursor,
+        )
+        .unwrap();
         doc.end_page().unwrap();
         let bytes = doc.end_document().unwrap();
         first_td_x(&bytes).expect("Td in right-aligned PDF")
@@ -717,43 +844,73 @@ fn right_aligned_td_x_is_greater_than_left() {
     assert!(
         right_x > left_x,
         "right-aligned x ({}) should exceed left-aligned x ({})",
-        right_x, left_x
+        right_x,
+        left_x
     );
 }
 
 #[test]
 fn center_aligned_td_x_is_between_left_and_right() {
     let table = Table::new(vec![200.0]);
-    let rect = Rect { x: 72.0, y: 720.0, width: 200.0, height: 648.0 };
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 200.0,
+        height: 648.0,
+    };
 
     let left_x = {
-        let style = CellStyle { text_align: TextAlign::Left, ..CellStyle::default() };
+        let style = CellStyle {
+            text_align: TextAlign::Left,
+            ..CellStyle::default()
+        };
         let mut doc = make_doc();
         doc.begin_page(612.0, 792.0);
         let mut cursor = TableCursor::new(&rect);
-        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.fit_row(
+            &table,
+            &Row::new(vec![Cell::styled("Hi", style)]),
+            &mut cursor,
+        )
+        .unwrap();
         doc.end_page().unwrap();
         let bytes = doc.end_document().unwrap();
         first_td_x(&bytes).expect("Td in left-aligned PDF")
     };
 
     let right_x = {
-        let style = CellStyle { text_align: TextAlign::Right, ..CellStyle::default() };
+        let style = CellStyle {
+            text_align: TextAlign::Right,
+            ..CellStyle::default()
+        };
         let mut doc = make_doc();
         doc.begin_page(612.0, 792.0);
         let mut cursor = TableCursor::new(&rect);
-        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.fit_row(
+            &table,
+            &Row::new(vec![Cell::styled("Hi", style)]),
+            &mut cursor,
+        )
+        .unwrap();
         doc.end_page().unwrap();
         let bytes = doc.end_document().unwrap();
         first_td_x(&bytes).expect("Td in right-aligned PDF")
     };
 
     let center_x = {
-        let style = CellStyle { text_align: TextAlign::Center, ..CellStyle::default() };
+        let style = CellStyle {
+            text_align: TextAlign::Center,
+            ..CellStyle::default()
+        };
         let mut doc = make_doc();
         doc.begin_page(612.0, 792.0);
         let mut cursor = TableCursor::new(&rect);
-        doc.fit_row(&table, &Row::new(vec![Cell::styled("Hi", style)]), &mut cursor).unwrap();
+        doc.fit_row(
+            &table,
+            &Row::new(vec![Cell::styled("Hi", style)]),
+            &mut cursor,
+        )
+        .unwrap();
         doc.end_page().unwrap();
         let bytes = doc.end_document().unwrap();
         first_td_x(&bytes).expect("Td in center-aligned PDF")
@@ -762,7 +919,9 @@ fn center_aligned_td_x_is_between_left_and_right() {
     assert!(
         center_x > left_x && center_x < right_x,
         "center x ({}) should be between left ({}) and right ({})",
-        center_x, left_x, right_x
+        center_x,
+        left_x,
+        right_x
     );
 }
 
@@ -791,5 +950,8 @@ fn right_aligned_multi_line_produces_valid_pdf() {
     assert!(contains(&bytes, b"%%EOF"));
     // Multi-line output requires at least two Td operators
     let td_count = bytes.windows(4).filter(|w| *w == b" Td\n" as &[u8]).count();
-    assert!(td_count >= 2, "multi-line right-aligned cell should have >=2 Td operators");
+    assert!(
+        td_count >= 2,
+        "multi-line right-aligned cell should have >=2 Td operators"
+    );
 }

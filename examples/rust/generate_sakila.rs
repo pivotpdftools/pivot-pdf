@@ -12,7 +12,7 @@ use pdf_core::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
     Table, TableCursor, TextStyle,
 };
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 const PAGE_WIDTH: f64 = 792.0; // landscape
 const PAGE_HEIGHT: f64 = 612.0;
@@ -33,8 +33,19 @@ const COL_WIDTHS: [f64; 13] = [
 ];
 
 const HEADERS: [&str; 13] = [
-    "ID", "Date", "Film Title", "Year", "Rating", "Category", "Length", "First Name", "Last Name",
-    "Email", "Address", "City", "Postal",
+    "ID",
+    "Date",
+    "Film Title",
+    "Year",
+    "Rating",
+    "Category",
+    "Length",
+    "First Name",
+    "Last Name",
+    "Email",
+    "Address",
+    "City",
+    "Postal",
 ];
 
 const SQL: &str = "
@@ -74,7 +85,12 @@ fn header_style() -> CellStyle {
 
 fn header_row() -> Row {
     let hs = header_style();
-    Row::new(HEADERS.iter().map(|h| Cell::styled(*h, hs.clone())).collect())
+    Row::new(
+        HEADERS
+            .iter()
+            .map(|h| Cell::styled(*h, hs.clone()))
+            .collect(),
+    )
 }
 
 const LAST_NAME_COL: usize = 8;
@@ -93,10 +109,16 @@ fn data_row(values: &[String], row_index: usize) -> Row {
         ..CellStyle::default()
     };
     // Last names are single words that can't wrap; shrink the font to fit.
-    let last_name_style = CellStyle { overflow: CellOverflow::Shrink, ..cell_style.clone() };
+    let last_name_style = CellStyle {
+        overflow: CellOverflow::Shrink,
+        ..cell_style.clone()
+    };
     // Email addresses have no word-break characters so they can't wrap.
     // Clip prevents them from visually overflowing into adjacent columns.
-    let email_style = CellStyle { overflow: CellOverflow::Clip, ..cell_style.clone() };
+    let email_style = CellStyle {
+        overflow: CellOverflow::Clip,
+        ..cell_style.clone()
+    };
 
     let cells = values
         .iter()
@@ -117,7 +139,12 @@ fn data_row(values: &[String], row_index: usize) -> Row {
 }
 
 fn table_rect() -> Rect {
-    Rect { x: TABLE_X, y: TABLE_TOP, width: TABLE_WIDTH, height: TABLE_HEIGHT }
+    Rect {
+        x: TABLE_X,
+        y: TABLE_TOP,
+        width: TABLE_WIDTH,
+        height: TABLE_HEIGHT,
+    }
 }
 
 fn main() {
@@ -140,7 +167,10 @@ fn main() {
 
     let table = Table::new(COL_WIDTHS.to_vec());
 
-    let footer_style = TextStyle { font: FontRef::Builtin(BuiltinFont::Helvetica), font_size: 8.0 };
+    let footer_style = TextStyle {
+        font: FontRef::Builtin(BuiltinFont::Helvetica),
+        font_size: 8.0,
+    };
 
     let mut stmt = conn.prepare(SQL).expect("prepare SQL");
     let mut rows_iter = stmt
@@ -168,8 +198,7 @@ fn main() {
     let mut cursor = TableCursor::new(&table_rect());
     let mut total_rows: usize = 0;
     let mut row_index: usize = 0;
-    let mut current: Option<Vec<String>> =
-        rows_iter.next().map(|r| r.expect("row"));
+    let mut current: Option<Vec<String>> = rows_iter.next().map(|r| r.expect("row"));
 
     loop {
         let values = match current.take() {
@@ -178,7 +207,10 @@ fn main() {
         };
 
         if cursor.is_first_row() {
-            match doc.fit_row(&table, &header_row(), &mut cursor).expect("fit_row header") {
+            match doc
+                .fit_row(&table, &header_row(), &mut cursor)
+                .expect("fit_row header")
+            {
                 FitResult::BoxEmpty => {
                     eprintln!("Warning: bounding box too small to fit header");
                     break;
@@ -230,5 +262,8 @@ fn main() {
 
     doc.end_document().expect("end_document");
 
-    println!("Written to {} ({} pages, {} rows)", out_path, total, total_rows);
+    println!(
+        "Written to {} ({} pages, {} rows)",
+        out_path, total, total_rows
+    );
 }
