@@ -88,7 +88,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 |---------|--------|-------|
 | Read / parse PDF | ✅ Implemented | Basic: page count + version. xref streams (PDF 1.5+) planned |
 | Extract form fields | 🔲 Future | Depends on read/parse |
-| Merge multiple PDFs | 🔲 Future | Depends on read/parse |
+| Merge multiple PDFs | ✅ Implemented | Traditional xref only; xref streams (PDF 1.5+) not yet supported |
 | Split PDF | 🔲 Future | Depends on read/parse |
 | OCR | ❌ Out of scope | Requires a full OCR pipeline; use a dedicated tool |
 | Multimedia (audio/video) | ❌ Out of scope | Not relevant to the target use case |
@@ -124,7 +124,7 @@ These directly address known gaps in the core generation loop:
 12. **Gradients and shading** — Useful for polished reports.
 13. **Read / parse PDF** — Foundation for field extraction and merging. This is a significant undertaking and planned as a future phase after the creation features are mature.
 14. **Extract form fields** — Depends on read/parse.
-15. **Merge multiple PDFs** — Depends on read/parse.
+15. **Merge multiple PDFs** — Implemented in Issue 28.
 
 ---
 

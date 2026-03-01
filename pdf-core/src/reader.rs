@@ -454,8 +454,7 @@ fn resolve_kids(
         .unwrap_or(slice.len());
     let slice = &slice[..obj_end];
 
-    let after_header =
-        skip_obj_header(slice).ok_or(PdfReadError::UnresolvableObject(obj_num))?;
+    let after_header = skip_obj_header(slice).ok_or(PdfReadError::UnresolvableObject(obj_num))?;
     let after_ws = skip_ascii_whitespace(after_header);
 
     // Locate `/Kids` within the object bytes and parse the following array.
@@ -796,7 +795,10 @@ mod tests {
         let bytes = make_pdf(5);
         let reader = PdfReader::from_bytes(bytes).unwrap();
         let nums = reader.page_object_numbers().unwrap();
-        assert!(nums.iter().all(|&n| n > 0), "all object numbers must be > 0");
+        assert!(
+            nums.iter().all(|&n| n > 0),
+            "all object numbers must be > 0"
+        );
         let unique: HashSet<_> = nums.iter().collect();
         assert_eq!(unique.len(), nums.len(), "object numbers must be unique");
     }
@@ -896,4 +898,3 @@ mod tests {
         assert_eq!(rest, b" tail");
     }
 }
-

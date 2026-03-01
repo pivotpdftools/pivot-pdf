@@ -976,25 +976,25 @@ impl Default for MergeOptions {
   is deferred until form field reading and writing are in place
 
 ## Tasks
-- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
-- [ ] Task 2: Define `MergeOptions` struct and `PdfMergeError` enum (including
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Define `MergeOptions` struct and `PdfMergeError` enum (including
       `NotSupported` and `ReadError(PdfReadError)` variants) in a new `pdf-core/src/merger.rs`
-- [ ] Task 3: Implement the object renumber utility — scan raw object bytes for `N G R`
+- [x] Task 3: Implement the object renumber utility — scan raw object bytes for `N G R`
       tokens and substitute using the per-source remapping table
-- [ ] Task 4: Implement `merge_pdfs` — open sources, collect closures, assign output IDs,
+- [x] Task 4: Implement `merge_pdfs` — open sources, collect closures, assign output IDs,
       copy and renumber objects, write new Catalog + Pages tree + xref + trailer
-- [ ] Task 5: Export `merge_pdfs`, `MergeOptions`, and `PdfMergeError` from `pdf-core/src/lib.rs`
-- [ ] Task 6: Write tests in `pdf-core/tests/merge_test.rs`: merge 2 single-page PDFs →
+- [x] Task 5: Export `merge_pdfs`, `MergeOptions`, and `PdfMergeError` from `pdf-core/src/lib.rs`
+- [x] Task 6: Write tests in `pdf-core/tests/merge_test.rs`: merge 2 single-page PDFs →
       verify output page count; merge 3 multi-page PDFs → verify total; output is readable
       by `PdfReader`
-- [ ] Task 7: Run `cargo test` to confirm all tests pass
-- [ ] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) with `merge_pdfs()` function
+- [x] Task 7: Run `cargo test` to confirm all tests pass
+- [x] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) with `merge_pdfs()` function
       and `MergeOptions` class
-- [ ] Task 9: Update PHP stubs (`pdf-php/pdf-php.stubs.php`)
-- [ ] Task 10: Create `examples/rust/generate_merge.rs` — merges two previously generated
+- [x] Task 9: Update PHP stubs (`pdf-php/pdf-php.stubs.php`)
+- [x] Task 10: Create `examples/rust/generate_merge.rs` — merges two previously generated
       PDFs, reads back the result and prints the page count
-- [ ] Task 11: Create `examples/php/generate_merge.php` — mirrors the Rust example
-- [ ] Task 12: Create `docs/features/pdf-merge.md`
+- [x] Task 11: Create `examples/php/generate_merge.php` — mirrors the Rust example
+- [x] Task 12: Create `docs/features/pdf-merge.md`
 
 ## Status
-ready
+complete

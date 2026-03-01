@@ -639,3 +639,39 @@ class PdfReader
     public function pdfVersion(): string {}
 }
 
+/**
+ * Options controlling PDF merge behaviour.
+ *
+ * Pass an instance to merge_pdfs().
+ */
+class MergeOptions
+{
+    /**
+     * Whether to flatten interactive form fields before merging.
+     *
+     * Not yet implemented — setting to true causes merge_pdfs() to throw.
+     *
+     * @var bool
+     */
+    public bool $flattenForms;
+
+    /**
+     * Create a MergeOptions instance with defaults (flattenForms = false).
+     */
+    public function __construct() {}
+}
+
+/**
+ * Merge one or more PDF files into a single output file.
+ *
+ * Pages from each source are appended in document order:
+ * all pages from inputs[0], then inputs[1], and so on.
+ *
+ * @param string[] $inputs  Array of source PDF file paths.
+ * @param string   $output  Output file path.
+ * @param MergeOptions $options  Merge options (use new MergeOptions() for defaults).
+ * @return void
+ * @throws \Exception on read/write error or if an unsupported option is requested.
+ */
+function merge_pdfs(array $inputs, string $output, MergeOptions $options): void {}
+

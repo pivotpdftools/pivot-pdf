@@ -46,3 +46,7 @@ path = "rust/generate_invoice.rs"
 [[example]]
 name = "read_tables"
 path = "rust/read_tables.rs"
+
+[[example]]
+name = "generate_merge"
+path = "rust/generate_merge.rs"

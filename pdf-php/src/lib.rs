@@ -5,9 +5,9 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pdf_core::{
-    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, ImageFit, ImageId,
-    PdfDocument, PdfReader, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle,
-    TrueTypeFontId, WordBreak,
+    merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult,
+    FontRef, ImageFit, ImageId, MergeOptions, PdfDocument, PdfReader, Rect, Row, Table,
+    TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -981,6 +981,62 @@ impl PhpPdfReader {
     }
 }
 
+// ----------------------------------------------------------
+// MergeOptions
+// ----------------------------------------------------------
+
+/// PHP class: MergeOptions
+///
+/// Controls how PDFs are merged. Pass an instance to `merge_pdfs()`.
+///
+/// ```php
+/// $opts = new MergeOptions();
+/// $opts->flattenForms = false; // default
+/// ```
+#[php_class]
+#[php(name = "MergeOptions")]
+pub struct PhpMergeOptions {
+    /// Whether to flatten interactive form fields before merging.
+    /// Not yet implemented — setting to `true` causes `merge_pdfs()` to throw.
+    #[php(prop)]
+    pub flatten_forms: bool,
+}
+
+#[php_impl]
+impl PhpMergeOptions {
+    pub fn __construct() -> Self {
+        PhpMergeOptions {
+            flatten_forms: false,
+        }
+    }
+}
+
+// ----------------------------------------------------------
+// merge_pdfs (global function)
+// ----------------------------------------------------------
+
+/// Merge one or more PDF files into a single output file.
+///
+/// ```php
+/// $opts = new MergeOptions();
+/// merge_pdfs(['a.pdf', 'b.pdf'], 'merged.pdf', $opts);
+/// $reader = PdfReader::open('merged.pdf');
+/// echo $reader->pageCount(); // total pages from both inputs
+/// ```
+#[php_function]
+pub fn merge_pdfs(
+    inputs: Vec<String>,
+    output: String,
+    options: &PhpMergeOptions,
+) -> Result<(), String> {
+    let opts = MergeOptions {
+        flatten_forms: options.flatten_forms,
+    };
+    let paths: Vec<&str> = inputs.iter().map(String::as_str).collect();
+    core_merge_pdfs(paths.as_slice(), output.as_str(), opts)
+        .map_err(|e| format!("merge_pdfs failed: {}", e))
+}
+
 fn parse_image_fit(s: &str) -> Result<ImageFit, String> {
     match s {
         "fit" => Ok(ImageFit::Fit),
@@ -1008,4 +1064,6 @@ pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
         .class::<PhpTableCursor>()
         .class::<PhpPdfDocument>()
         .class::<PhpPdfReader>()
+        .class::<PhpMergeOptions>()
+        .function(wrap_function!(merge_pdfs))
 }
