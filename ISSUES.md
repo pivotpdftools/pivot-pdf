@@ -907,24 +907,24 @@ All new methods are `pub(crate)`. This is internal infrastructure with no public
 changes. Issue 28 (PDF Merge) is blocked on this issue.
 
 ## Tasks
-- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
-- [ ] Task 2: Add `pub(crate) fn page_object_numbers(&self) -> Result<Vec<u32>, PdfReadError>` —
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `pub(crate) fn page_object_numbers(&self) -> Result<Vec<u32>, PdfReadError>` —
       walks the Catalog → Pages tree recursively, returning page object numbers in order
-- [ ] Task 3: Add an indirect reference extractor — scans a byte slice for all `N G R`
+- [x] Task 3: Add an indirect reference extractor — scans a byte slice for all `N G R`
       patterns (handling dicts and arrays) and returns the set of referenced object numbers
-- [ ] Task 4: Add `pub(crate) fn collect_closure(&self, roots: &[u32]) -> Result<HashSet<u32>, PdfReadError>` —
+- [x] Task 4: Add `pub(crate) fn collect_closure(&self, roots: &[u32]) -> Result<HashSet<u32>, PdfReadError>` —
       BFS from seed object numbers, following all indirect references to build the full
       transitive object closure
-- [ ] Task 5: Add `pub(crate) fn raw_object_bytes(&self, obj_num: u32) -> Result<&[u8], PdfReadError>` —
+- [x] Task 5: Add `pub(crate) fn raw_object_bytes(&self, obj_num: u32) -> Result<&[u8], PdfReadError>` —
       returns the raw bytes from `N G obj` through the matching `endobj` keyword
-- [ ] Task 6: Write tests: `page_object_numbers` returns correct count and order;
+- [x] Task 6: Write tests: `page_object_numbers` returns correct count and order;
       `collect_closure` includes all expected objects; `raw_object_bytes` returns valid
       content for a known object
-- [ ] Task 7: Run `cargo test` to confirm all tests pass
-- [ ] Task 8: Update `docs/features/pdf-read.md` to describe the enhanced capabilities
+- [x] Task 7: Run `cargo test` to confirm all tests pass
+- [x] Task 8: Update `docs/features/pdf-read.md` to describe the enhanced capabilities
 
 ## Status
-ready
+complete
 
 ---
 

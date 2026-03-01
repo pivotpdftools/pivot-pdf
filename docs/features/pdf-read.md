@@ -104,6 +104,42 @@ The parser is implemented in pure Rust with no additional dependencies. A full-f
 - **Encrypted PDFs**: Not supported. Parsing an encrypted PDF will likely fail with `MalformedPageTree` or similar.
 - **Incremental updates**: Only the most recent xref table (at `startxref`) is used. Earlier versions of an incrementally updated PDF are ignored, which is the correct behavior for reading the current document state.
 
+## Internal Infrastructure (pub(crate))
+
+Issue 27 added three `pub(crate)` methods used by the PDF Merge feature (Issue 28).
+These are not part of the public API.
+
+### `page_object_numbers() -> Result<Vec<u32>, PdfReadError>`
+
+Walks the page tree (Catalog → Pages → Kids, recursively) and returns the object
+number of every leaf `/Page` node in document order.
+
+### `collect_closure(roots: &[u32]) -> Result<HashSet<u32>, PdfReadError>`
+
+BFS from a seed set of object numbers through all indirect references (`N G R`)
+reachable from those objects. Returns the complete transitive closure — every object
+a page depends on (content streams, fonts, images, resource dicts, etc.).
+
+### `raw_object_bytes(obj_num: u32) -> Result<&[u8], PdfReadError>`
+
+Returns a zero-copy slice of the raw bytes for a single object, from `N G obj`
+through (and including) `endobj`. Used by `collect_closure` and the merge function
+to scan for references and to copy object data verbatim.
+
+### Implementation notes
+
+- **`skip_nested_dict` depth tracking**: The parser uses an `i32` depth counter that
+  decrements-then-checks (not checks-then-decrements), so the outer closing `>>`
+  is consumed correctly without accidentally consuming the enclosing structure's `>>`.
+- **`resolve_kids` is bounded**: The search for `/Kids` is restricted to the current
+  object's bytes (up to its `endobj`) to prevent matching `/Kids` from a later object
+  in the file.
+- **`extract_indirect_refs` tokenizer**: Scans for whitespace/delimiter-separated
+  tokens and looks for `N G R` triplets. May include false positives from binary
+  streams, which is harmless for closure computation (extra objects in the closure
+  are simply orphaned during merge).
+
 ## History
 
 - **Issue 26**: Initial implementation — `PdfReader::open()`, `PdfReader::from_bytes()`, `page_count()`, `pdf_version()`. PHP bindings via `PdfReader::open()` and `PdfReader::fromBytes()`.
+- **Issue 27**: Added `pub(crate)` infrastructure for PDF merging: `page_object_numbers()`, `collect_closure()`, `raw_object_bytes()`. Fixed `skip_nested_dict` depth-tracking bug (was checking depth before decrementing, causing the enclosing dict's closing `>>` to be consumed). Added bounded search in `resolve_kids`.
