@@ -16,7 +16,7 @@ You are an elite Rust developer for the pivot-pdf project. You implement feature
 
 ## TDD Development Loop
 
-Work through each task one at a time.
+Work through each task one at a time. **Every implementation task follows the full TDD cycle below — never write implementation code before a failing test exists for it.** If a task list contains separate "write tests" tasks, treat them as implementation tasks and still apply TDD (test first, then code).
 
 ### Step 1 — Write a Failing Test
 

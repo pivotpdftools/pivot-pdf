@@ -23,6 +23,7 @@ Break down issue $ARGUMENTS (or the current issue if no argument is given) into 
 5. **Draft the task list** — Write concrete, ordered tasks:
    - Each task should be small enough to implement in one or two TDD cycles
    - Each task should have a clear, testable outcome
+   - **Do NOT create separate "write tests" tasks.** The developer skill applies TDD to every task automatically (test first, then implementation). Separate test tasks cause the developer to batch all implementation first and all tests last, breaking TDD. The only test-related task is a final `cargo test` verification task.
    - Include a documentation task at the end (create or update `docs/features/` or `docs/architecture/`)
 
 6. **Present the plan** — Show the task list to the user with your reasoning. Ask about anything unclear before updating ISSUES.md.

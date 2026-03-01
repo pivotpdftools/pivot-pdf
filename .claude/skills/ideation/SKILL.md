@@ -58,11 +58,12 @@ ready
 ```
 
 **Task guidelines:**
-- Task 1 is always: update ISSUES.md and set status to in-progress
+- Task 1 is always: update ISSUES.md with task breakdown and set status to in-progress
 - Each task should be small enough for one TDD cycle
+- **Do NOT create separate "write tests" tasks.** The developer skill applies TDD to every task automatically (test first, then implementation). Separate test tasks cause the developer to batch all implementation first and all tests last, breaking TDD.
 - If public API changes: include tasks for PHP bindings (`pdf-php/src/lib.rs`) and stubs (`pdf-php/pdf-php.stubs.php`)
 - If new behavior is user-facing: include an examples task (both Rust and PHP)
-- Last content task: `cargo test` to confirm passing
+- Last content task: `cargo test` to confirm all tests pass (this is the only test-related task)
 - Last task: documentation in `docs/features/` or `docs/architecture/`
 - If the idea warrants research before implementation: split into a research issue (status: `ready`) and an implementation issue (status: `blocked`) — mark the implementation issue as depending on the research
 
