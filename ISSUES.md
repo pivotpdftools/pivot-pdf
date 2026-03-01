@@ -889,3 +889,112 @@ Questions:
 complete
 
 ---
+
+# Issue 27: Extend PdfReader with Page Object Resolution
+
+## Description
+`PdfReader` (Issue 26) can count pages but doesn't yet expose the raw object data
+needed for merging. This issue adds `pub(crate)` infrastructure to `PdfReader` to:
+
+1. **Walk the page tree** — enumerate page object numbers in document order.
+2. **Collect object closures** — given a seed set of object numbers, BFS through all
+   indirect references (`N G R`) to build the transitive set of all objects a page
+   depends on (content streams, resource dicts, fonts, images, etc.).
+3. **Extract raw object bytes** — return the raw bytes of a specific object by number
+   (from `obj` to `endobj`) so that a merge function can copy and renumber them.
+
+All new methods are `pub(crate)`. This is internal infrastructure with no public API
+changes. Issue 28 (PDF Merge) is blocked on this issue.
+
+## Tasks
+- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [ ] Task 2: Add `pub(crate) fn page_object_numbers(&self) -> Result<Vec<u32>, PdfReadError>` —
+      walks the Catalog → Pages tree recursively, returning page object numbers in order
+- [ ] Task 3: Add an indirect reference extractor — scans a byte slice for all `N G R`
+      patterns (handling dicts and arrays) and returns the set of referenced object numbers
+- [ ] Task 4: Add `pub(crate) fn collect_closure(&self, roots: &[u32]) -> Result<HashSet<u32>, PdfReadError>` —
+      BFS from seed object numbers, following all indirect references to build the full
+      transitive object closure
+- [ ] Task 5: Add `pub(crate) fn raw_object_bytes(&self, obj_num: u32) -> Result<&[u8], PdfReadError>` —
+      returns the raw bytes from `N G obj` through the matching `endobj` keyword
+- [ ] Task 6: Write tests: `page_object_numbers` returns correct count and order;
+      `collect_closure` includes all expected objects; `raw_object_bytes` returns valid
+      content for a known object
+- [ ] Task 7: Run `cargo test` to confirm all tests pass
+- [ ] Task 8: Update `docs/features/pdf-read.md` to describe the enhanced capabilities
+
+## Status
+ready
+
+---
+
+# Issue 28: PDF Merge
+
+## Description
+Implement PDF merging using the page object resolution infrastructure from Issue 27.
+The primary API is a standalone function:
+
+```rust
+pub fn merge_pdfs<P: AsRef<Path>>(
+    inputs: &[P],
+    output: P,
+    options: MergeOptions,
+) -> Result<(), PdfMergeError>
+```
+
+### MergeOptions
+```rust
+pub struct MergeOptions {
+    /// Flatten interactive form fields into static page content before merging.
+    /// Prevents field name conflicts when source PDFs have overlapping field names.
+    ///
+    /// **Not yet implemented.** Returns `PdfMergeError::NotSupported` if set to `true`.
+    /// Full support will be added once form field reading and writing are implemented.
+    pub flatten_forms: bool,
+}
+
+impl Default for MergeOptions {
+    fn default() -> Self { Self { flatten_forms: false } }
+}
+```
+
+### Algorithm
+1. Open each source file with `PdfReader`
+2. For each source, call `page_object_numbers()` to list its pages in order
+3. For each page, call `collect_closure()` to find all dependent objects
+4. Assign output object IDs from a global counter (prevents conflicts between sources)
+5. Build a per-source remapping table: `source_obj_num → output_obj_num`
+6. Copy objects: extract raw bytes via `raw_object_bytes()`, rewrite all `N G R` patterns
+   using the remapping table
+7. Write the output PDF: header, all copied objects, a new Pages tree referencing the
+   copied page objects in order, Catalog, xref table, and trailer
+
+### Scope
+- All pages from each source are included; page range selection is a future issue
+- Sources must use traditional xref tables (xref streams / PDF 1.5+ not yet supported)
+- `flatten_forms: true` returns `PdfMergeError::NotSupported` — full implementation
+  is deferred until form field reading and writing are in place
+
+## Tasks
+- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [ ] Task 2: Define `MergeOptions` struct and `PdfMergeError` enum (including
+      `NotSupported` and `ReadError(PdfReadError)` variants) in a new `pdf-core/src/merger.rs`
+- [ ] Task 3: Implement the object renumber utility — scan raw object bytes for `N G R`
+      tokens and substitute using the per-source remapping table
+- [ ] Task 4: Implement `merge_pdfs` — open sources, collect closures, assign output IDs,
+      copy and renumber objects, write new Catalog + Pages tree + xref + trailer
+- [ ] Task 5: Export `merge_pdfs`, `MergeOptions`, and `PdfMergeError` from `pdf-core/src/lib.rs`
+- [ ] Task 6: Write tests in `pdf-core/tests/merge_test.rs`: merge 2 single-page PDFs →
+      verify output page count; merge 3 multi-page PDFs → verify total; output is readable
+      by `PdfReader`
+- [ ] Task 7: Run `cargo test` to confirm all tests pass
+- [ ] Task 8: Update PHP extension (`pdf-php/src/lib.rs`) with `merge_pdfs()` function
+      and `MergeOptions` class
+- [ ] Task 9: Update PHP stubs (`pdf-php/pdf-php.stubs.php`)
+- [ ] Task 10: Create `examples/rust/generate_merge.rs` — merges two previously generated
+      PDFs, reads back the result and prints the page count
+- [ ] Task 11: Create `examples/php/generate_merge.php` — mirrors the Rust example
+- [ ] Task 12: Create `docs/features/pdf-merge.md`
+
+## Status
+ready
