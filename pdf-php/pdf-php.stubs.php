@@ -7,7 +7,7 @@
  * autocompletion for IDEs (PhpStorm, Intelephense, etc.).
  */
 
-if (!extension_loaded('pdf_php')) {
+if (!extension_loaded('pdf-php')) {
 
 class Color
 {
