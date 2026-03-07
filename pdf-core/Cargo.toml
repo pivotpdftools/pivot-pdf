@@ -9,6 +9,7 @@ readme = "../README.md"
 keywords = ["pdf", "pdf-generation", "report", "document"]
 categories = ["text-processing", "rendering"]
 authors = ["Rob Apodaca <rob.apodaca@gmail.com>"]
+exclude = ["/pdf-php", "/composer.json", "/scripts/post-install.php", "/.claude", "/.github", "/pdf-cli"]
 
 [dependencies]
 flate2 = "1"
