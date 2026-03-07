@@ -7,6 +7,8 @@
  * autocompletion for IDEs (PhpStorm, Intelephense, etc.).
  */
 
+if (!extension_loaded('pdf_php')) {
+
 class Color
 {
     public float $r;
@@ -682,3 +684,4 @@ class MergeOptions
  */
 function merge_pdfs(array $inputs, string $output, MergeOptions $options): void {}
 
+} // if (!extension_loaded('pdf_php'))

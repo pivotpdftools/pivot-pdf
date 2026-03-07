@@ -26,20 +26,20 @@ pick up the type hints and autocompletion for all pivot-pdf classes.
 
 ## Step 2: Download the Extension Binary
 
-Visit the [GitHub Releases page](https://github.com/PivotPDF/pivot-pdf/releases/latest) and
+Visit the [GitHub Releases page](https://github.com/pivotpdftools/pivot-pdf/releases/latest) and
 download the binary that matches your platform and PHP version.
 
 **File naming convention:**
 
 | Platform | File                                                 |
 |----------|------------------------------------------------------|
-| Linux    | `libpdf_php-<version>-linux-php<PHP_MAJOR_MINOR>.so` |
-| macOS    | `libpdf_php-<version>-macos-php<PHP_MAJOR_MINOR>.dylib` |
-| Windows  | `libpdf_php-<version>-windows-php<PHP_MAJOR_MINOR>.dll` |
+| Linux    | `pdf_php-linux-php<PHP_MAJOR_MINOR>.so` |
+| macOS    | `pdf_php-macos-php<PHP_MAJOR_MINOR>.dylib` |
+| Windows  | `pdf_php-windows-php<PHP_MAJOR_MINOR>.dll` |
 
 **Examples:**
-- `libpdf_php-0.1.0-linux-php83.so` — Linux, PHP 8.3
-- `libpdf_php-0.1.0-macos-php82.dylib` — macOS, PHP 8.2
+- `pdf_php-linux-php83.so` — Linux, PHP 8.3
+- `pdf_php-macos-php82.dylib` — macOS, PHP 8.2
 
 Check your PHP version:
 ```bash
@@ -65,7 +65,7 @@ Example output: `/usr/lib/php/20230831`
 Copy the downloaded binary into the directory from Step 3:
 
 ```bash
-cp libpdf_php-0.1.0-linux-php83.so /usr/lib/php/20230831/libpdf_php.so
+cp pdf_php-linux-php83.so /usr/lib/php/20230831/pdf_php.so
 ```
 
 ---
@@ -81,17 +81,17 @@ Because the file is in your `extension_dir`, you only need the filename — no f
 
 **Linux:**
 ```ini
-extension=libpdf_php.so
+extension=pdf_php.so
 ```
 
 **macOS:**
 ```ini
-extension=libpdf_php.dylib
+extension=pdf_php.dylib
 ```
 
 **Windows:**
 ```ini
-extension=libpdf_php.dll
+extension=pdf_php.dll
 ```
 
 If you're using PHP-FPM or Apache, restart the service after editing php.ini:

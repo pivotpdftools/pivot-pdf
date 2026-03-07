@@ -1079,3 +1079,33 @@ Publish a Composer package on Packagist so PHP developers can easily add pivot-p
 
 ## Status
 complete
+
+---
+
+# Issue 31: Guard PHP Stubs Against "Cannot Redeclare" Errors
+
+## Description
+
+When the `pivot-pdf/pivot-pdf` Composer package is installed and its stubs file is
+autoloaded via `require vendor/autoload.php`, PHP throws:
+
+    Fatal error: Cannot redeclare <name>
+
+…because the native extension has already registered the same classes and functions.
+This affects all 12 classes (`Color`, `TextStyle`, `Rect`, `TextFlow`, `CellStyle`,
+`Cell`, `Row`, `Table`, `TableCursor`, `PdfDocument`, `PdfReader`, `MergeOptions`)
+and the standalone `merge_pdfs()` function.
+
+**Fix:** Wrap the entire body of `pdf-php/pdf-php.stubs.php` in a single
+`if (!extension_loaded('pdf_php'))` guard. When the native extension is loaded,
+the entire stub block is skipped. When it is not loaded (IDE static analysis via
+Composer autoload, without the native extension in php.ini), all stubs are defined
+normally and IDEs continue to pick them up.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Wrap the entire body of `pdf-php/pdf-php.stubs.php` in
+      `if (!extension_loaded('pdf_php')) { ... }`
+
+## Status
+complete
