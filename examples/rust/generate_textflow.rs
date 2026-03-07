@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();

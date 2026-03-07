@@ -2,9 +2,10 @@
 name = "pdf-examples"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
-pdf-core = { path = "../pdf-core" }
+pivot-pdf = { path = "../pdf-core" }
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 [[example]]

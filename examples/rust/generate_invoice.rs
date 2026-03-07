@@ -7,7 +7,7 @@
 ///   cargo run --example generate_invoice -p pdf-examples
 ///
 /// Opens output at: examples/output/rust-invoice.pdf
-use pdf_core::{
+use pivot_pdf::{
     BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
     TableCursor, TextAlign, TextStyle,
 };

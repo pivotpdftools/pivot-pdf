@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FontRef, ImageFit, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{BuiltinFont, FontRef, ImageFit, PdfDocument, Rect, TextFlow, TextStyle};
 
 // -------------------------------------------------------
 // page_count

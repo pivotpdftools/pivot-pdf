@@ -1,4 +1,4 @@
-use pdf_core::objects::{ObjId, PdfObject};
+use pivot_pdf::objects::{ObjId, PdfObject};
 
 #[test]
 fn obj_id_equality() {

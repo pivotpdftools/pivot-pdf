@@ -1,4 +1,4 @@
-use pdf_core::{ImageFit, PdfDocument, Rect};
+use pivot_pdf::{ImageFit, PdfDocument, Rect};
 
 const TEST_JPEG: &[u8] = include_bytes!("fixtures/test.jpg");
 const TEST_PNG: &[u8] = include_bytes!("fixtures/test.png");

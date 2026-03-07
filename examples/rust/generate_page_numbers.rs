@@ -11,7 +11,7 @@
 ///   cargo run --example generate_page_numbers -p pdf-examples
 ///
 /// Opens output at: examples/output/rust-page-numbers.pdf
-use pdf_core::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
 
 const PAGE_WIDTH: f64 = 612.0;
 const PAGE_HEIGHT: f64 = 792.0;

@@ -1,4 +1,4 @@
-use pdf_core::PdfDocument;
+use pivot_pdf::PdfDocument;
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();

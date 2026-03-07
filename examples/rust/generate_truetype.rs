@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle};
 
 fn main() {
     // Use DejaVu Sans from the test fixtures, or pass a

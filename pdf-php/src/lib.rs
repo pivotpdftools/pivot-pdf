@@ -4,7 +4,7 @@ use std::io::{BufWriter, Write};
 use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
-use pdf_core::{
+use pivot_pdf::{
     merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult,
     FontRef, ImageFit, ImageId, MergeOptions, PdfDocument, PdfReader, Rect, Row, Table,
     TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId, WordBreak,

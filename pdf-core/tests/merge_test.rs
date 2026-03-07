@@ -1,4 +1,4 @@
-use pdf_core::{merge_pdfs, MergeOptions, PdfDocument, PdfReader};
+use pivot_pdf::{merge_pdfs, MergeOptions, PdfDocument, PdfReader};
 
 /// Helper: create a PDF with `n` blank pages and return the raw bytes.
 fn make_pdf(n: usize) -> Vec<u8> {
@@ -36,7 +36,7 @@ fn merge_flatten_forms_returns_not_supported() {
     };
     let result = merge_pdfs(&[&a], &out, opts);
     assert!(
-        matches!(result, Err(pdf_core::PdfMergeError::NotSupported)),
+        matches!(result, Err(pivot_pdf::PdfMergeError::NotSupported)),
         "expected NotSupported, got {:?}",
         result
     );

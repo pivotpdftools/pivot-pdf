@@ -1,4 +1,4 @@
-use pdf_core::{Color, PdfDocument};
+use pivot_pdf::{Color, PdfDocument};
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();

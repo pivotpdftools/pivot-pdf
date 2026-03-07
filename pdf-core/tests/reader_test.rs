@@ -1,4 +1,4 @@
-use pdf_core::{PdfDocument, PdfReadError, PdfReader};
+use pivot_pdf::{PdfDocument, PdfReadError, PdfReader};
 
 /// Helper: create a PDF with `n` blank pages and return the raw bytes.
 fn make_pdf(n: usize) -> Vec<u8> {

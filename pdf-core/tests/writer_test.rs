@@ -1,5 +1,5 @@
-use pdf_core::objects::{ObjId, PdfObject};
-use pdf_core::writer::{escape_pdf_string, PdfWriter};
+use pivot_pdf::objects::{ObjId, PdfObject};
+use pivot_pdf::writer::{escape_pdf_string, PdfWriter};
 
 #[test]
 fn header_bytes() {

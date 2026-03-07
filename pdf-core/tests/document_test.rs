@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io::{self, Write};
 use std::rc::Rc;
 
-use pdf_core::{PdfDocument, TextStyle};
+use pivot_pdf::{PdfDocument, TextStyle};
 
 #[test]
 fn create_empty_document() {

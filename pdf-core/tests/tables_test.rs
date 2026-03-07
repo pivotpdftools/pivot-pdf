@@ -1,4 +1,4 @@
-use pdf_core::{
+use pivot_pdf::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
     Table, TableCursor, TextAlign, WordBreak,
 };

@@ -1135,16 +1135,16 @@ from `pdf-core` to `pivot-pdf` across the workspace, and updating all
 - `authors = ["Rob Apodaca <rob.apodaca@gmail.com>"]`
 
 ## Tasks
-- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
-- [ ] Task 2: Rename package in `pdf-core/Cargo.toml` to `pivot-pdf`; add description, license, repository, readme, keywords, categories, authors
-- [ ] Task 3: Add `publish = false` to `pdf-php/Cargo.toml` and `examples/Cargo.toml`
-- [ ] Task 4: Update dependency references from `pdf-core` to `pivot-pdf` in `pdf-php/Cargo.toml` and `examples/Cargo.toml` (all sub-members)
-- [ ] Task 5: Update all `use pdf_core::` import paths to `use pivot_pdf::` across the workspace
-- [ ] Task 6: Run `cargo build` and `cargo test` to confirm the workspace still compiles and all tests pass
-- [ ] Task 7: Run `cargo publish --dry-run -p pivot-pdf` to confirm the package is ready for publication
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Rename package in `pdf-core/Cargo.toml` to `pivot-pdf`; add description, license, repository, readme, keywords, categories, authors
+- [x] Task 3: Add `publish = false` to `pdf-php/Cargo.toml` and `examples/Cargo.toml`
+- [x] Task 4: Update dependency references from `pdf-core` to `pivot-pdf` in `pdf-php/Cargo.toml` and `examples/Cargo.toml` (all sub-members)
+- [x] Task 5: Update all `use pdf_core::` import paths to `use pivot_pdf::` across the workspace
+- [x] Task 6: Run `cargo build` and `cargo test` to confirm the workspace still compiles and all tests pass
+- [x] Task 7: Run `cargo publish --dry-run -p pivot-pdf` to confirm the package is ready for publication
 
 ## Status
-ready
+complete
 
 ---
 

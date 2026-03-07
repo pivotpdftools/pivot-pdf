@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
 
 const DEJAVU_SANS: &[u8] = include_bytes!("fixtures/DejaVuSans.ttf");
 

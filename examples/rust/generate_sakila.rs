@@ -8,7 +8,7 @@
 ///   cargo run --example generate_sakila -p pdf-examples -- /path/to/sakila.db
 ///
 /// Output: examples/output/rust-sakila.pdf
-use pdf_core::{
+use pivot_pdf::{
     BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
     Table, TableCursor, TextStyle,
 };

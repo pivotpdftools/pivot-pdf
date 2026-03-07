@@ -5,7 +5,7 @@
 ///
 /// Run with:
 ///   cargo run --example read_tables -p pdf-examples
-use pdf_core::PdfReader;
+use pivot_pdf::PdfReader;
 
 fn main() {
     let path = "examples/output/rust-tables.pdf";

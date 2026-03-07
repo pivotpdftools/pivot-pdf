@@ -1,4 +1,4 @@
-use pdf_core::fonts::{BuiltinFont, FontMetrics};
+use pivot_pdf::fonts::{BuiltinFont, FontMetrics};
 
 #[test]
 fn helvetica_space_width() {

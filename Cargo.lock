@@ -835,19 +835,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "pdf-core"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "png",
- "ttf-parser",
-]
-
-[[package]]
 name = "pdf-examples"
 version = "0.1.0"
 dependencies = [
- "pdf-core",
+ "pivot-pdf",
  "rusqlite",
 ]
 
@@ -856,7 +847,7 @@ name = "pdf-php"
 version = "0.1.0"
 dependencies = [
  "ext-php-rs",
- "pdf-core",
+ "pivot-pdf",
 ]
 
 [[package]]
@@ -873,6 +864,15 @@ name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+
+[[package]]
+name = "pivot-pdf"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "png",
+ "ttf-parser",
+]
 
 [[package]]
 name = "pkg-config"

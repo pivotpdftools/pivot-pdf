@@ -1,4 +1,4 @@
-use pdf_core::{Color, PdfDocument};
+use pivot_pdf::{Color, PdfDocument};
 
 #[test]
 fn stroke_line_produces_operators() {

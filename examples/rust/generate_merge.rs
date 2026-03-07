@@ -7,7 +7,7 @@
 ///   cargo run --example generate_merge -p pdf-examples
 ///
 /// Output: examples/output/rust-merged.pdf
-use pdf_core::{merge_pdfs, MergeOptions, PdfReader};
+use pivot_pdf::{merge_pdfs, MergeOptions, PdfReader};
 
 fn main() {
     let inputs = [

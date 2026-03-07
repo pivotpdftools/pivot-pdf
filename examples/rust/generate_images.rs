@@ -1,4 +1,4 @@
-use pdf_core::{ImageFit, PdfDocument, Rect};
+use pivot_pdf::{ImageFit, PdfDocument, Rect};
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();

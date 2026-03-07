@@ -1,4 +1,4 @@
-use pdf_core::PdfDocument;
+use pivot_pdf::PdfDocument;
 
 /// Helper: find a byte pattern in a buffer.
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {

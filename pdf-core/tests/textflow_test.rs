@@ -1,4 +1,4 @@
-use pdf_core::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle, WordBreak};
+use pivot_pdf::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle, WordBreak};
 
 /// Helper: check that a byte pattern exists in the buffer.
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
