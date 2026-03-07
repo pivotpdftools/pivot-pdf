@@ -11,6 +11,7 @@ pub struct PdfWriter<W: Write> {
 }
 
 impl<W: Write> PdfWriter<W> {
+    /// Create a new `PdfWriter` wrapping the given writer.
     pub fn new(writer: W) -> Self {
         PdfWriter {
             writer,

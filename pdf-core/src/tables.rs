@@ -73,7 +73,9 @@ impl Default for CellStyle {
 /// A single table cell containing text and style.
 #[derive(Clone)]
 pub struct Cell {
+    /// Text content to display in the cell.
     pub text: String,
+    /// Visual style for this cell (font, color, padding, overflow, alignment).
     pub style: CellStyle,
     /// Number of columns this cell spans (default `1`, must be >= 1).
     pub col_span: usize,
@@ -102,6 +104,8 @@ impl Cell {
 /// A row of cells in a table.
 #[derive(Clone)]
 pub struct Row {
+    /// Cells in this row. The sum of `col_span` values across all cells must
+    /// equal the table's column count.
     pub cells: Vec<Cell>,
     /// Optional background color applied to the entire row.
     /// Per-cell background_color takes priority.

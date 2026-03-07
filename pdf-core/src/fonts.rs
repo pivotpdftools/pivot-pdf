@@ -6,7 +6,10 @@ pub struct TrueTypeFontId(pub usize);
 /// TrueType font.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum FontRef {
+    /// One of the 14 standard PDF Type1 fonts, guaranteed available in all viewers.
     Builtin(BuiltinFont),
+    /// A TrueType font loaded via [`crate::PdfDocument::load_font_file`] or
+    /// [`crate::PdfDocument::load_font_bytes`].
     TrueType(TrueTypeFontId),
 }
 
@@ -21,19 +24,33 @@ impl From<BuiltinFont> for FontRef {
 /// without embedding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum BuiltinFont {
+    /// Helvetica (sans-serif, regular).
     Helvetica,
+    /// Helvetica Bold.
     HelveticaBold,
+    /// Helvetica Oblique (italic).
     HelveticaOblique,
+    /// Helvetica Bold Oblique.
     HelveticaBoldOblique,
+    /// Times Roman (serif, regular).
     TimesRoman,
+    /// Times Bold.
     TimesBold,
+    /// Times Italic.
     TimesItalic,
+    /// Times Bold Italic.
     TimesBoldItalic,
+    /// Courier (monospace, regular).
     Courier,
+    /// Courier Bold.
     CourierBold,
+    /// Courier Oblique (italic).
     CourierOblique,
+    /// Courier Bold Oblique.
     CourierBoldOblique,
+    /// Symbol (mathematical and special characters).
     Symbol,
+    /// Zapf Dingbats (decorative symbols).
     ZapfDingbats,
 }
 

@@ -7,7 +7,9 @@ pub struct ImageId(pub usize);
 /// Supported image formats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImageFormat {
+    /// JPEG (DCT-encoded). Embedded as-is without re-encoding.
     Jpeg,
+    /// PNG (decoded to raw pixels before embedding).
     Png,
 }
 
@@ -27,11 +29,14 @@ pub enum ImageFit {
 /// PDF color space for image data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorSpace {
+    /// Full-color RGB (24-bit).
     DeviceRGB,
+    /// Grayscale (8-bit).
     DeviceGray,
 }
 
 impl ColorSpace {
+    /// Returns the PDF name string for this color space (e.g. `"DeviceRGB"`).
     pub fn pdf_name(&self) -> &'static str {
         match self {
             ColorSpace::DeviceRGB => "DeviceRGB",
@@ -42,10 +47,15 @@ impl ColorSpace {
 
 /// Parsed image data ready for embedding into a PDF.
 pub struct ImageData {
+    /// Image width in pixels.
     pub width: u32,
+    /// Image height in pixels.
     pub height: u32,
+    /// Encoding format of the source image.
     pub format: ImageFormat,
+    /// PDF color space for the pixel data.
     pub color_space: ColorSpace,
+    /// Number of bits per color component (typically 8).
     pub bits_per_component: u8,
     /// Raw pixel data (RGB/Gray) or raw JPEG bytes.
     pub data: Vec<u8>,
@@ -71,9 +81,13 @@ pub struct ImagePlacement {
 /// A clip rectangle in PDF coordinates (bottom-left origin).
 #[derive(Debug)]
 pub struct ClipRect {
+    /// Left edge in PDF coordinates.
     pub x: f64,
+    /// Bottom edge in PDF coordinates.
     pub y: f64,
+    /// Width in PDF points.
     pub width: f64,
+    /// Height in PDF points.
     pub height: f64,
 }
 

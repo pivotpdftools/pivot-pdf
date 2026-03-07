@@ -29,26 +29,36 @@ pub enum FitResult {
 }
 
 /// A bounding rectangle for text placement.
-/// (x, y) is the upper-left corner. Text flows top-to-bottom.
+///
+/// `(x, y)` is the upper-left corner; text flows top-to-bottom.
+/// All values are in PDF points.
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {
+    /// Left edge in PDF points (origin at top-left of the layout area).
     pub x: f64,
+    /// Top edge in PDF points (origin at top-left of the layout area).
     pub y: f64,
+    /// Width in PDF points.
     pub width: f64,
+    /// Height in PDF points.
     pub height: f64,
 }
 
 /// Tracks which fonts were actually used during content generation.
 #[derive(Debug, Default)]
 pub struct UsedFonts {
+    /// Set of built-in fonts used.
     pub builtin: BTreeSet<BuiltinFont>,
+    /// Indices into the document's TrueType font list for fonts used.
     pub truetype: BTreeSet<usize>,
 }
 
 /// Text styling options.
 #[derive(Debug, Clone)]
 pub struct TextStyle {
+    /// Font to use for this style.
     pub font: FontRef,
+    /// Font size in PDF points.
     pub font_size: f64,
 }
 
@@ -99,6 +109,7 @@ pub struct TextFlow {
 }
 
 impl TextFlow {
+    /// Create an empty text flow with default word-break settings.
     pub fn new() -> Self {
         TextFlow {
             spans: Vec::new(),

@@ -3,8 +3,11 @@
 /// Each component is in the range 0.0 (none) to 1.0 (full intensity).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color {
+    /// Red component (0.0–1.0).
     pub r: f64,
+    /// Green component (0.0–1.0).
     pub g: f64,
+    /// Blue component (0.0–1.0).
     pub b: f64,
 }
 

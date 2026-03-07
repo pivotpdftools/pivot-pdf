@@ -1161,17 +1161,17 @@ Add `#![warn(missing_docs)]` at the crate root to enforce coverage and catch
 regressions.
 
 ## Tasks
-- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
-- [ ] Task 2: Add `#![warn(missing_docs)]` to `pdf-core/src/lib.rs`; fix any immediate compile warnings it raises
-- [ ] Task 3: Add crate-level doc comment to `lib.rs` (overview, quick example)
-- [ ] Task 4: Add doc comments to all public items in `document.rs`
-- [ ] Task 5: Add doc comments to all public items in `textflow.rs`
-- [ ] Task 6: Add doc comments to all public items in `tables.rs`
-- [ ] Task 7: Add doc comments to all public items in `fonts.rs` and `truetype.rs`
-- [ ] Task 8: Add doc comments to all public items in `graphics.rs` and `images.rs`
-- [ ] Task 9: Add doc comments to all public items in `objects.rs`, `writer.rs`, `reader.rs`, and `merger.rs`
-- [ ] Task 10: Run `cargo doc --no-deps` with zero warnings to confirm full coverage
-- [ ] Task 11: Run `cargo test` to confirm all tests still pass
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `#![warn(missing_docs)]` to `pdf-core/src/lib.rs`; fix any immediate compile warnings it raises
+- [x] Task 3: Add crate-level doc comment to `lib.rs` (overview, quick example)
+- [x] Task 4: Add doc comments to all public items in `document.rs`
+- [x] Task 5: Add doc comments to all public items in `textflow.rs`
+- [x] Task 6: Add doc comments to all public items in `tables.rs`
+- [x] Task 7: Add doc comments to all public items in `fonts.rs` and `truetype.rs`
+- [x] Task 8: Add doc comments to all public items in `graphics.rs` and `images.rs`
+- [x] Task 9: Add doc comments to all public items in `objects.rs`, `writer.rs`, `reader.rs`, and `merger.rs`
+- [x] Task 10: Run `cargo doc --no-deps` with zero warnings to confirm full coverage
+- [x] Task 11: Run `cargo test` to confirm all tests still pass
 
 ## Status
-blocked
+complete
