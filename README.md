@@ -17,6 +17,17 @@ Designed for low memory and CPU consumption — even for documents with hundreds
 - **Compression** — optional FlateDecode compression for all stream objects (typically 50–80% size reduction)
 - **PHP extension** — full PHP binding exposing all features via a native extension
 
+## PHP Installation
+
+Install the Composer package for IDE autocompletion stubs:
+
+```bash
+composer require pivot-pdf/pivot-pdf
+```
+
+The native extension binary must be installed separately. For the full installation
+guide, see [docs/php-installation.md](docs/php-installation.md).
+
 ## Requirements
 
 ### Rust (pdf-core, pdf-cli)

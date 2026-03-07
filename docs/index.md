@@ -41,6 +41,10 @@ Designed for **low memory and CPU consumption** — even for documents with hund
 - [TrueType Fonts](features/truetype-fonts) — Embed `.ttf` files with full Unicode support
 - [Page Editing](features/edit-page) — Open completed pages for overlay content (e.g. "Page X of Y")
 
+### PHP Extension
+
+- [PHP Installation Guide](php-installation) — Composer package, binary download, php.ini config, and verification
+
 ---
 
 ## Quick Start

@@ -1,0 +1,45 @@
+{
+    "name": "pivot-pdf/pivot-pdf",
+    "description": "PHP stubs and installation guide for the pivot-pdf native PDF generation extension.",
+    "type": "library",
+    "keywords": ["pdf", "pdf-generation", "extension", "php-extension"],
+    "homepage": "https://github.com/PivotPDF/pivot-pdf",
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/PivotPDF/pivot-pdf/issues",
+        "source": "https://github.com/PivotPDF/pivot-pdf"
+    },
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "files": [
+            "pdf-php/pdf-php.stubs.php"
+        ]
+    },
+    "scripts": {
+        "post-install-cmd": "@php scripts/post-install.php",
+        "post-update-cmd": "@php scripts/post-install.php"
+    },
+    "scripts-descriptions": {
+        "post-install-cmd": "Print pivot-pdf extension installation instructions."
+    },
+    "archive": {
+        "exclude": [
+            "/pdf-core",
+            "/pdf-cli",
+            "/pdf-php/src",
+            "/pdf-php/tests",
+            "/pdf-php/Cargo.toml",
+            "/examples",
+            "/docs",
+            "/Cargo.toml",
+            "/Cargo.lock",
+            "/ISSUES.md",
+            "/ROADMAP.md",
+            "/CLAUDE.md",
+            "/.claude",
+            "/target"
+        ]
+    }
+}

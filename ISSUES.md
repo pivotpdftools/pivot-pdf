@@ -1052,3 +1052,30 @@ The existing table example (Rust + PHP) is updated to use a spanning header row 
 
 ## Status
 complete
+
+---
+
+# Issue 30: PHP Composer Package
+
+## Description
+
+Publish a Composer package on Packagist so PHP developers can easily add pivot-pdf to their project. The package ships two things: the IDE stubs file (for autocompletion) and a post-install message that prints platform-specific download and install instructions for the extension binary.
+
+**What the package provides:**
+- `pdf-php/pdf-php.stubs.php` — IDE autocompletion, included as `autoload.files` so IDEs pick it up automatically
+- `pdf-php/INSTALL.txt` — concise instructions: where to download the binary (GitHub Releases), how to pick the right file for their platform/PHP version, and how to add `extension=` to php.ini
+- A post-install-cmd script that prints `INSTALL.txt` to the terminal after `composer require`
+
+**Composer package name:** `pivot-pdf/pivot-pdf`
+
+**Note:** Packagist registration is a one-time manual step — link the GitHub repo at packagist.org after this issue is complete.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Create `pdf-php/INSTALL.txt` — platform/version download table, php.ini instruction, and verify step
+- [x] Task 3: Create `composer.json` at repo root — package name, description, stubs autoload, post-install-cmd script to print INSTALL.txt
+- [x] Task 4: Add a PHP Installation section to README.md (brief: `composer require`, point to full docs)
+- [x] Task 5: Create `docs/php-installation.md` — full install guide covering Composer, binary download, php.ini config, and verification
+
+## Status
+complete
