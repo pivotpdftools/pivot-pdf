@@ -1109,3 +1109,69 @@ normally and IDEs continue to pick them up.
 
 ## Status
 complete
+
+---
+
+# Issue 32: Prepare for crates.io Publication
+## Description
+
+Rename the `pdf-core` package to `pivot-pdf` and add all required and
+recommended metadata so it can be published to crates.io. Also mark
+`pdf-php` and `examples` as `publish = false` so they are never
+accidentally published.
+
+Renaming the package means updating all internal dependency references
+from `pdf-core` to `pivot-pdf` across the workspace, and updating all
+`use pdf_core::` imports to `use pivot_pdf::`.
+
+**Cargo.toml fields to add:**
+- `name = "pivot-pdf"` (rename from `pdf-core`)
+- `description` — one-line summary
+- `license = "MIT"`
+- `repository = "https://github.com/pivotpdftools/pivot-pdf"`
+- `readme = "../README.md"`
+- `keywords = ["pdf", "pdf-generation", "report", "document"]`
+- `categories = ["text-processing", "rendering"]`
+- `authors = ["Rob Apodaca <rob.apodaca@gmail.com>"]`
+
+## Tasks
+- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [ ] Task 2: Rename package in `pdf-core/Cargo.toml` to `pivot-pdf`; add description, license, repository, readme, keywords, categories, authors
+- [ ] Task 3: Add `publish = false` to `pdf-php/Cargo.toml` and `examples/Cargo.toml`
+- [ ] Task 4: Update dependency references from `pdf-core` to `pivot-pdf` in `pdf-php/Cargo.toml` and `examples/Cargo.toml` (all sub-members)
+- [ ] Task 5: Update all `use pdf_core::` import paths to `use pivot_pdf::` across the workspace
+- [ ] Task 6: Run `cargo build` and `cargo test` to confirm the workspace still compiles and all tests pass
+- [ ] Task 7: Run `cargo publish --dry-run -p pivot-pdf` to confirm the package is ready for publication
+
+## Status
+ready
+
+---
+
+# Issue 33: Public API Documentation
+## Description
+
+Add doc comments to all public items in `pivot-pdf` so that docs.rs renders
+useful documentation when the crate is published.
+
+Scope: every public struct, enum, function, method, and module that appears
+in the crate's public surface.
+
+Add `#![warn(missing_docs)]` at the crate root to enforce coverage and catch
+regressions.
+
+## Tasks
+- [ ] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [ ] Task 2: Add `#![warn(missing_docs)]` to `pdf-core/src/lib.rs`; fix any immediate compile warnings it raises
+- [ ] Task 3: Add crate-level doc comment to `lib.rs` (overview, quick example)
+- [ ] Task 4: Add doc comments to all public items in `document.rs`
+- [ ] Task 5: Add doc comments to all public items in `textflow.rs`
+- [ ] Task 6: Add doc comments to all public items in `tables.rs`
+- [ ] Task 7: Add doc comments to all public items in `fonts.rs` and `truetype.rs`
+- [ ] Task 8: Add doc comments to all public items in `graphics.rs` and `images.rs`
+- [ ] Task 9: Add doc comments to all public items in `objects.rs`, `writer.rs`, `reader.rs`, and `merger.rs`
+- [ ] Task 10: Run `cargo doc --no-deps` with zero warnings to confirm full coverage
+- [ ] Task 11: Run `cargo test` to confirm all tests still pass
+
+## Status
+blocked
