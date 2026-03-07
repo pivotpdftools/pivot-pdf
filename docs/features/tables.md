@@ -199,6 +199,8 @@ have each line flush to the right edge of the cell.
 | `background_color` | `Option<Color>` | None | |
 | `text_color` | `Option<Color>` | None (black) | |
 
+The `Cell` struct also has a `col_span: usize` field (default `1`) — see the [Column Span](#column-span) section.
+
 The `Table.default_style` field is a reference style — it is not applied automatically. Clone it when constructing cells to reuse a consistent style:
 
 ```rust
@@ -255,9 +257,44 @@ while rows.peek().is_some() {
 doc.end_page()?;
 ```
 
+## Column Span
+
+A cell can span multiple consecutive columns by setting `col_span`:
+
+```rust
+use pdf_core::{Cell, CellStyle, TextAlign};
+
+let mut group = Cell::styled("Employee Details", CellStyle {
+    text_align: TextAlign::Center,
+    ..CellStyle::default()
+});
+group.col_span = 3;  // spans columns 1, 2, and 3
+
+// Row: | (blank) | Employee Details (span 3) | Amount |
+//      col 0       cols 1-3                    col 4
+let header = Row::new(vec![
+    Cell::new(""),     // col 0
+    group,             // cols 1, 2, 3
+    Cell::new("Amount"), // col 4
+]);
+```
+
+Rules:
+- `col_span` defaults to `1` — no API change needed for existing code.
+- The sum of all `col_span` values in a row **must equal** `table.columns.len()`. `fit_row` returns `Err(InvalidInput)` if not.
+- The spanning cell's rendered width = sum of its spanned column widths.
+- Internal vertical border dividers within the span are suppressed. The outer border remains intact.
+- **No row span** — row spans are incompatible with the streaming model.
+
+In PHP:
+```php
+$cell = Cell::styled("Group Label", $style);
+$cell->colSpan = 3;  // camelCase — ext-php-rs converts col_span → colSpan
+```
+
 ## Limitations
 
-- **No column or row span** — each cell occupies exactly one column.
+- **No row span** — each cell occupies exactly one row (incompatible with streaming).
 - **Padding is uniform** — all four sides share the same padding value.
 - **No table-level min/max width** — column widths must be set explicitly.
 
@@ -292,3 +329,4 @@ Each cell is wrapped in a PDF graphics state save/restore (`q`/`Q`). This isolat
 - **Issue 20** (2026-02): Added `word_break: WordBreak` to `CellStyle` (default `BreakAll`). Long words are now broken at character boundaries by default instead of overflowing. See [Word Break](word-break.md) for details.
 - **Issue 25** (2026-02): Added `text_align: TextAlign` to `CellStyle` (default `Left`). Each cell can be independently left-, center-, or right-aligned. Multi-line cells align each wrapped line independently. Invoice examples updated to right-align all currency columns.
 - **Issue 25 follow-up** (2026-02): Fixed PHP property naming in stubs and examples. ext-php-rs converts Rust snake_case field names to PHP camelCase property names (e.g., `text_align` → `textAlign`, `font_name` → `fontName`). Stubs and all PHP examples updated to use the correct camelCase names. The `clone()` docblock and `wordBreak` (TextFlow) stub were also corrected.
+- **Issue 29** (2026-03): Added `col_span: usize` to `Cell` (default `1`). A spanning cell's width equals the sum of its column widths; internal vertical dividers within the span are suppressed. `fit_row` validates that the sum of all `col_span` values equals `table.columns.len()`, returning `Err(InvalidInput)` otherwise. PHP binding exposes `colSpan` property on `Cell`. Table examples updated to demonstrate a group header row.

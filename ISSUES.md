@@ -998,3 +998,57 @@ impl Default for MergeOptions {
 
 ## Status
 complete
+
+---
+
+# Issue 29: Table Column Span
+
+## Description
+
+Add column span support to the table API, enabling a single cell to span multiple consecutive columns. The primary use case is header rows where a grouped label (e.g. "Profit") spans sub-columns (e.g. "Gross" and "Net").
+
+### API Change
+
+Add `col_span: usize` to `Cell` (default `1`):
+
+```rust
+pub struct Cell {
+    pub text: String,
+    pub style: CellStyle,
+    pub col_span: usize,  // default 1, must be >= 1
+}
+```
+
+`Cell::new` and `Cell::styled` continue to work as before, with `col_span` defaulting to `1`.
+
+### Rendering
+
+A spanning cell's width = sum of the widths of all spanned columns + border widths between those columns. The internal vertical column dividers within a spanned cell are suppressed.
+
+### Validation
+
+`fit_row` returns `Err(io::Error::new(io::ErrorKind::InvalidInput, ...))` if the row's cell spans do not sum to the table's column count. Row spans are out of scope (incompatible with the streaming model).
+
+### PHP bindings
+
+`col_span` → `colSpan` in PHP (ext-php-rs camelCase convention).
+
+### Examples
+
+The existing table example (Rust + PHP) is updated to use a spanning header row demonstrating the feature.
+
+## Tasks
+
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `col_span: usize` (default `1`) to `Cell` struct; update `Cell::new` and `Cell::styled` constructors
+- [x] Task 3: Update `generate_row_ops` — compute each cell's rendered width as the sum of its spanned columns (plus internal border widths), and suppress vertical dividers between spanned columns
+- [x] Task 4: Add span validation to `fit_row` — return `InvalidInput` error if sum of `col_span` values ≠ `table.columns.len()`
+- [x] Task 5: Update PHP extension (`pdf-php/src/lib.rs`) to expose `col_span` field
+- [x] Task 6: Update PHP stubs (`pdf-php/pdf-php.stubs.php`) with `public int $colSpan;` on the `Cell` class
+- [x] Task 7: Update existing Rust table example to demonstrate a spanning header row
+- [x] Task 8: Update existing PHP table example to match
+- [x] Task 9: Run `cargo test` to confirm all tests pass
+- [x] Task 10: Update `docs/features/tables.md` — add column span to the Cell API section, update the Limitations note, and add a usage example
+
+## Status
+complete

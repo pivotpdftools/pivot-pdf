@@ -65,7 +65,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Tables (streaming, row-by-row) | ✅ Implemented | Per-cell styles, overflow modes, borders, backgrounds, text alignment |
+| Tables (streaming, row-by-row) | ✅ Implemented | Per-cell styles, overflow modes, borders, backgrounds, text alignment, column span |
 | Table cell word break | ✅ Implemented | Force-break at character boundary; optional hyphen |
 | Headers and footers (built-in) | 🔲 Planned | Repeated content registered once, applied each page |
 | Multi-column layout | 🔲 Future | |

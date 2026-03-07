@@ -358,12 +358,16 @@ impl PhpCellStyle {
 /// ```php
 /// $cell = new Cell("Hello");
 /// $cell = Cell::styled("Bold", $style);
+/// $cell->colSpan = 2;  // span two columns
 /// ```
 #[php_class]
 #[php(name = "Cell")]
 pub struct PhpCell {
     text: String,
     style: Option<CellStyle>,
+    /// Number of columns this cell spans (default 1, must be >= 1).
+    #[php(prop)]
+    pub col_span: i64,
 }
 
 #[php_impl]
@@ -372,6 +376,7 @@ impl PhpCell {
         PhpCell {
             text: text.to_string(),
             style: None,
+            col_span: 1,
         }
     }
 
@@ -380,16 +385,19 @@ impl PhpCell {
         Ok(PhpCell {
             text: text.to_string(),
             style: Some(style.to_core()?),
+            col_span: 1,
         })
     }
 }
 
 impl PhpCell {
     fn to_core(self) -> Cell {
-        match self.style {
+        let mut cell = match self.style {
             Some(s) => Cell::styled(self.text, s),
             None => Cell::new(self.text),
-        }
+        };
+        cell.col_span = self.col_span.max(1) as usize;
+        cell
     }
 }
 
@@ -422,6 +430,7 @@ impl PhpRow {
                 let cell = PhpCell {
                     text: c.text.clone(),
                     style: c.style.clone(),
+                    col_span: c.col_span,
                 };
                 cell.to_core()
             })

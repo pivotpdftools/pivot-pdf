@@ -6,7 +6,8 @@
  *
  * Demonstrates:
  * - Streaming row-by-row placement using fitRow() + TableCursor
- * - Header row repeated at the top of each new page via isFirstRow()
+ * - Two-row header (group label + field names) repeated on each page via isFirstRow()
+ * - col_span: "Employee Details" spans three consecutive columns
  * - Alternating row background colors
  *
  * Run with:
@@ -26,16 +27,29 @@ $names       = [
 
 // Header style: bold white text on dark background
 $headerStyle = new CellStyle();
-$headerStyle->fontName = "Helvetica-Bold";
-$headerStyle->fontSize = 9.0;
-$headerStyle->padding   = 5.0;
+$headerStyle->fontName   = "Helvetica-Bold";
+$headerStyle->fontSize   = 9.0;
+$headerStyle->padding    = 5.0;
+$headerStyle->setBackgroundColor(new Color(0.2, 0.3, 0.5));
+$headerStyle->setTextColor(new Color(1.0, 1.0, 1.0));
 
-$headerBgColor = new Color(0.2, 0.3, 0.5);
-$headerStyle->setBackgroundColor($headerBgColor);
+// Group header row: "Employee Details" spans Name + Department + Status (3 cols).
+// Layout: | ID (1) | Employee Details (span 3) | Amount ($) (1) |
+$groupStyle = $headerStyle->clone();
+$groupStyle->textAlign = 'center';
 
-$headerFgColor = new Color(1.0, 1.0, 1.0);
-$headerStyle->setTextColor($headerFgColor);
+$idCell     = Cell::styled("", $groupStyle);
+$idCell->colSpan = 1;
 
+$groupCell  = Cell::styled("Employee Details", $groupStyle);
+$groupCell->colSpan = 3;
+
+$amountCell = Cell::styled("", $groupStyle);
+$amountCell->colSpan = 1;
+
+$groupHeaderRow = new Row([$idCell, $groupCell, $amountCell]);
+
+// Field names header row
 $headerRow = new Row([
     Cell::styled("ID",         $headerStyle),
     Cell::styled("Name",       $headerStyle),
@@ -80,12 +94,14 @@ $cursor = new TableCursor($tableRect);
 $idx      = 0;
 $rowCount = count($dbRows);
 while ($idx < $rowCount) {
-    // Repeat header at the top of every page.
+    // Repeat the two-row header (group + field names) at the top of every page.
     if ($cursor->isFirstRow()) {
-        $r = $doc->fitRow($table, $headerRow, $cursor);
-        if ($r === 'box_empty') {
-            fwrite(STDERR, "Warning: bounding box too small to fit header row\n");
-            break;
+        foreach ([$groupHeaderRow, $headerRow] as $hRow) {
+            $r = $doc->fitRow($table, $hRow, $cursor);
+            if ($r === 'box_empty') {
+                fwrite(STDERR, "Warning: bounding box too small to fit header row\n");
+                break 2;
+            }
         }
     }
 

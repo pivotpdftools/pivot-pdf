@@ -735,6 +735,148 @@ fn word_break_increases_cell_height_to_fit_all_pieces() {
 }
 
 // -------------------------------------------------------
+// Column span tests
+// -------------------------------------------------------
+
+#[test]
+fn cell_col_span_defaults_to_one() {
+    assert_eq!(Cell::new("x").col_span, 1);
+    assert_eq!(Cell::styled("x", CellStyle::default()).col_span, 1);
+}
+
+/// A spanning cell's background should cover the combined width of all spanned columns.
+/// A 3-column table with columns 100, 100, 100. A cell with col_span=2 starts at x=72
+/// and spans 200pt. We verify it produces a valid PDF (spans don't panic or corrupt).
+#[test]
+fn spanning_cell_renders_without_error() {
+    let table = Table::new(vec![100.0, 100.0, 100.0]);
+    let mut header_cell = Cell::styled(
+        "Grouped",
+        CellStyle {
+            background_color: Some(Color::rgb(0.2, 0.3, 0.5)),
+            text_color: Some(Color::rgb(1.0, 1.0, 1.0)),
+            ..CellStyle::default()
+        },
+    );
+    header_cell.col_span = 2;
+
+    // 3 columns: [span-2 cell, single cell] = 2 + 1 = 3 ✓
+    let row = Row::new(vec![header_cell, Cell::new("Single")]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 300.0,
+        height: 200.0,
+    };
+    let mut cursor = TableCursor::new(&rect);
+    let result = doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop);
+    assert!(contains(&bytes, b"%PDF-1.7"));
+    assert!(contains(&bytes, b"(Grouped) Tj"));
+    assert!(contains(&bytes, b"(Single) Tj"));
+}
+
+/// fit_row returns InvalidInput error when col_span sum doesn't equal column count.
+#[test]
+fn fit_row_returns_error_when_span_sum_wrong() {
+    let table = Table::new(vec![100.0, 100.0, 100.0]); // 3 columns
+                                                       // Row with 2 cells both span=1 → total span=2, not 3 → error
+    let row = Row::new(vec![Cell::new("A"), Cell::new("B")]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 300.0,
+        height: 200.0,
+    };
+    let mut cursor = TableCursor::new(&rect);
+    let result = doc.fit_row(&table, &row, &mut cursor);
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+}
+
+#[test]
+fn fit_row_accepts_row_when_span_sum_correct() {
+    let table = Table::new(vec![100.0, 100.0, 100.0]); // 3 columns
+    let mut span_cell = Cell::new("AB");
+    span_cell.col_span = 2;
+    let row = Row::new(vec![span_cell, Cell::new("C")]); // 2 + 1 = 3 ✓
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 300.0,
+        height: 200.0,
+    };
+    let mut cursor = TableCursor::new(&rect);
+    let result = doc.fit_row(&table, &row, &mut cursor);
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    assert!(result.is_ok());
+}
+
+/// The column divider between two columns merged by a span should be suppressed.
+/// A 3-column table [100, 100, 100] with a cell spanning cols 0+1, and a cell for col 2.
+/// The divider at x=172 (between col 0 and col 1) must NOT appear; the divider at x=272
+/// (between col 1+2 span and col 2) MUST appear.
+///
+/// We verify by checking for the absence of the suppressed divider move command.
+/// With row_x=72: col divider after col 0 is at x=172; after col 1 is at x=272.
+/// The suppressed divider line starts with "172 " and ends with " m\n".
+#[test]
+fn spanning_cell_suppresses_internal_border_divider() {
+    let mut table = Table::new(vec![100.0, 100.0, 100.0]);
+    table.border_width = 1.0;
+
+    let mut span_cell = Cell::new("Header");
+    span_cell.col_span = 2;
+    let row = Row::new(vec![span_cell, Cell::new("Col3")]);
+
+    let mut doc = make_doc();
+    doc.begin_page(612.0, 792.0);
+    let rect = Rect {
+        x: 72.0,
+        y: 720.0,
+        width: 300.0,
+        height: 200.0,
+    };
+    let mut cursor = TableCursor::new(&rect);
+    doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    // The suppressed divider would appear as a move to x=172 (72+100)
+    // The visible divider appears as a move to x=272 (72+200)
+    // Check the internal divider (x=172) is NOT in the output as a vertical line
+    // and the external divider (x=272) IS.
+    let has_172 = bytes.windows(b"172 ".len()).any(|w| w == b"172 ");
+    let has_272 = bytes.windows(b"272 ".len()).any(|w| w == b"272 ");
+    assert!(
+        !has_172,
+        "internal border divider at x=172 should be suppressed"
+    );
+    assert!(
+        has_272,
+        "external border divider at x=272 should be present"
+    );
+}
+
+// -------------------------------------------------------
 // Text alignment tests
 // -------------------------------------------------------
 

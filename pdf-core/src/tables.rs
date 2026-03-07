@@ -75,6 +75,8 @@ impl Default for CellStyle {
 pub struct Cell {
     pub text: String,
     pub style: CellStyle,
+    /// Number of columns this cell spans (default `1`, must be >= 1).
+    pub col_span: usize,
 }
 
 impl Cell {
@@ -83,6 +85,7 @@ impl Cell {
         Cell {
             text: text.into(),
             style: CellStyle::default(),
+            col_span: 1,
         }
     }
 
@@ -91,6 +94,7 @@ impl Cell {
         Cell {
             text: text.into(),
             style,
+            col_span: 1,
         }
     }
 }
@@ -171,35 +175,35 @@ impl Table {
         let mut output: Vec<u8> = Vec::new();
         let mut used = UsedFonts::default();
 
-        draw_row_backgrounds(
+        let segments = cell_segments(&row.cells, &self.columns, cursor.rect.x);
+
+        draw_row_backgrounds_with_segments(
             row,
-            &self.columns,
+            &segments,
             cursor.rect.x,
             cursor.current_y,
             row_height,
+            &self.columns,
             &mut output,
         );
 
-        let mut col_x = cursor.rect.x;
-        for (col_idx, &col_width) in self.columns.iter().enumerate() {
-            if let Some(cell) = row.cells.get(col_idx) {
-                render_cell(
-                    cell,
-                    col_x,
-                    cursor.current_y,
-                    col_width,
-                    row_height,
-                    tt_fonts,
-                    &mut output,
-                    &mut used,
-                );
-            }
-            col_x += col_width;
+        for (cell, (cell_x, cell_width)) in row.cells.iter().zip(segments.iter()) {
+            render_cell(
+                cell,
+                *cell_x,
+                cursor.current_y,
+                *cell_width,
+                row_height,
+                tt_fonts,
+                &mut output,
+                &mut used,
+            );
         }
 
         if self.border_width > 0.0 {
             draw_row_borders(
                 &self.columns,
+                &row.cells,
                 cursor.rect.x,
                 cursor.current_y,
                 row_height,
@@ -296,10 +300,51 @@ impl TableCursor {
 // Measurement helpers
 // -------------------------------------------------------
 
+/// Compute (x_position, width) for each cell, respecting col_span.
+fn cell_segments(cells: &[Cell], columns: &[f64], row_x: f64) -> Vec<(f64, f64)> {
+    let mut segments = Vec::with_capacity(cells.len());
+    let mut col_idx = 0;
+    let mut x = row_x;
+    for cell in cells {
+        let span = cell.col_span.max(1);
+        let end = (col_idx + span).min(columns.len());
+        let width: f64 = columns[col_idx..end].iter().sum();
+        segments.push((x, width));
+        x += width;
+        col_idx = end;
+    }
+    segments
+}
+
+/// Compute which column dividers should be drawn.
+///
+/// Returns a `Vec<bool>` of length `columns.len() - 1`. `visible[k]` is `true`
+/// when the divider between column k and column k+1 should be drawn.
+fn visible_dividers(cells: &[Cell], columns: &[f64]) -> Vec<bool> {
+    let n = columns.len();
+    if n <= 1 {
+        return vec![];
+    }
+    let mut visible = vec![true; n - 1];
+    let mut col_idx = 0;
+    for cell in cells {
+        let span = cell.col_span.max(1);
+        // Suppress dividers within the span: between col_idx and col_idx+span-1.
+        for k in col_idx..(col_idx + span).saturating_sub(1) {
+            if k < visible.len() {
+                visible[k] = false;
+            }
+        }
+        col_idx += span;
+    }
+    visible
+}
+
 /// Compute the height needed for a row based on its content.
 ///
 /// Returns `row.height` directly for fixed-height rows (Clip/Shrink modes).
-/// Otherwise computes the maximum cell height across all columns.
+/// Otherwise computes the maximum cell height across all cells, using each
+/// cell's actual rendered width (accounting for col_span).
 fn measure_row_height(
     row: &Row,
     columns: &[f64],
@@ -309,19 +354,23 @@ fn measure_row_height(
     if let Some(h) = row.height {
         return h;
     }
-    columns
-        .iter()
-        .enumerate()
-        .map(|(col_idx, &col_width)| {
-            if let Some(cell) = row.cells.get(col_idx) {
-                measure_cell_height(&cell.text, &cell.style, col_width, tt_fonts)
-            } else {
-                // Empty column: height of one line plus padding
-                let ts = make_text_style(default_style);
-                line_height_for(&ts, tt_fonts) + 2.0 * default_style.padding
-            }
-        })
-        .fold(0.0_f64, f64::max)
+    let mut max_height = 0.0_f64;
+    let mut col_idx = 0;
+    for cell in &row.cells {
+        let span = cell.col_span.max(1);
+        let end = (col_idx + span).min(columns.len());
+        let cell_width: f64 = columns[col_idx..end].iter().sum();
+        let h = measure_cell_height(&cell.text, &cell.style, cell_width, tt_fonts);
+        max_height = max_height.max(h);
+        col_idx = end;
+    }
+    if max_height == 0.0 {
+        // Fallback: no cells
+        let ts = make_text_style(default_style);
+        line_height_for(&ts, tt_fonts) + 2.0 * default_style.padding
+    } else {
+        max_height
+    }
 }
 
 /// Compute the height needed to display a cell's text content with wrapping.
@@ -603,12 +652,14 @@ fn emit_cell_text(text: &str, font: FontRef, tt_fonts: &mut [TrueTypeFont], outp
 /// Draw row and cell background fills.
 ///
 /// Row background is drawn first; per-cell backgrounds overlay on top.
-fn draw_row_backgrounds(
+/// `segments` contains the (x, width) for each cell, already accounting for col_span.
+fn draw_row_backgrounds_with_segments(
     row: &Row,
-    columns: &[f64],
+    segments: &[(f64, f64)],
     row_x: f64,
     row_top: f64,
     row_height: f64,
+    columns: &[f64],
     output: &mut Vec<u8>,
 ) {
     let row_bottom = row_top - row_height;
@@ -630,32 +681,31 @@ fn draw_row_backgrounds(
         );
     }
 
-    let mut col_x = row_x;
-    for (col_idx, &col_width) in columns.iter().enumerate() {
-        if let Some(cell) = row.cells.get(col_idx) {
-            if let Some(bg) = cell.style.background_color {
-                output.extend_from_slice(
-                    format!(
-                        "{} {} {} rg\n{} {} {} {} re\nf\n",
-                        format_coord(bg.r),
-                        format_coord(bg.g),
-                        format_coord(bg.b),
-                        format_coord(col_x),
-                        format_coord(row_bottom),
-                        format_coord(col_width),
-                        format_coord(row_height),
-                    )
-                    .as_bytes(),
-                );
-            }
+    for (cell, &(cell_x, cell_width)) in row.cells.iter().zip(segments.iter()) {
+        if let Some(bg) = cell.style.background_color {
+            output.extend_from_slice(
+                format!(
+                    "{} {} {} rg\n{} {} {} {} re\nf\n",
+                    format_coord(bg.r),
+                    format_coord(bg.g),
+                    format_coord(bg.b),
+                    format_coord(cell_x),
+                    format_coord(row_bottom),
+                    format_coord(cell_width),
+                    format_coord(row_height),
+                )
+                .as_bytes(),
+            );
         }
-        col_x += col_width;
     }
 }
 
 /// Draw row borders: outer rectangle plus vertical column dividers.
+///
+/// Vertical dividers within a cell's col_span are suppressed.
 fn draw_row_borders(
     columns: &[f64],
+    cells: &[Cell],
     row_x: f64,
     row_top: f64,
     row_height: f64,
@@ -690,20 +740,26 @@ fn draw_row_borders(
         .as_bytes(),
     );
 
-    // Vertical column dividers (not drawn after the last column)
+    // Vertical column dividers — suppressed within spans
+    let visible = visible_dividers(cells, columns);
     let mut col_x = row_x;
-    for &col_width in &columns[..columns.len().saturating_sub(1)] {
+    for (k, &col_width) in columns[..columns.len().saturating_sub(1)]
+        .iter()
+        .enumerate()
+    {
         col_x += col_width;
-        output.extend_from_slice(
-            format!(
-                "{} {} m\n{} {} l\nS\n",
-                format_coord(col_x),
-                format_coord(row_top),
-                format_coord(col_x),
-                format_coord(row_bottom),
-            )
-            .as_bytes(),
-        );
+        if visible.get(k).copied().unwrap_or(true) {
+            output.extend_from_slice(
+                format!(
+                    "{} {} m\n{} {} l\nS\n",
+                    format_coord(col_x),
+                    format_coord(row_top),
+                    format_coord(col_x),
+                    format_coord(row_bottom),
+                )
+                .as_bytes(),
+            );
+        }
     }
 
     output.extend_from_slice(b"Q\n");

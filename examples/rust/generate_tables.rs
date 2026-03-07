@@ -1,8 +1,10 @@
 /// Example: Simulated database report rendered as a multi-page table.
 ///
 /// Demonstrates streaming row-by-row placement using `fit_row` + `TableCursor`.
-/// A header row is automatically repeated at the top of each new page by
-/// checking `cursor.is_first_row()` before placing each data row.
+/// A two-row header (group label + field names) is repeated at the top of each
+/// new page by checking `cursor.is_first_row()` before placing data rows.
+/// The group header row uses `col_span` to merge "Employee Details" across
+/// three consecutive columns.
 ///
 /// Run with:
 ///   cargo run --example generate_tables -p pdf-examples
@@ -10,7 +12,7 @@
 /// Opens output at: examples/output/rust-tables.pdf
 use pdf_core::{
     BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
-    TableCursor,
+    TableCursor, TextAlign,
 };
 
 const PAGE_WIDTH: f64 = 612.0;
@@ -31,6 +33,23 @@ fn header_style() -> CellStyle {
         padding: 5.0,
         ..CellStyle::default()
     }
+}
+
+/// Group header row: "Employee Details" spans Name + Department + Status (3 cols).
+///
+/// Layout: | ID (1) | Employee Details (span 3) | Amount ($) (1) |
+fn group_header_row() -> Row {
+    let mut hs = header_style();
+    hs.text_align = TextAlign::Center;
+
+    let id_cell = Cell::styled("", hs.clone());
+
+    let mut group_cell = Cell::styled("Employee Details", hs.clone());
+    group_cell.col_span = 3;
+
+    let amount_cell = Cell::styled("", hs);
+
+    Row::new(vec![id_cell, group_cell, amount_cell])
 }
 
 fn header_row() -> Row {
@@ -113,17 +132,19 @@ fn main() {
     let mut cursor = TableCursor::new(&new_page_rect());
 
     while rows_iter.peek().is_some() {
-        // Repeat header at the top of every page.
+        // Repeat the two-row header (group + field names) at the top of every page.
         if cursor.is_first_row() {
-            match doc
-                .fit_row(&table, &header_row(), &mut cursor)
-                .expect("fit_row header")
-            {
-                FitResult::BoxEmpty => {
-                    eprintln!("Warning: bounding box too small to fit header row");
-                    break;
+            for header in [group_header_row(), header_row()] {
+                match doc
+                    .fit_row(&table, &header, &mut cursor)
+                    .expect("fit_row header")
+                {
+                    FitResult::BoxEmpty => {
+                        eprintln!("Warning: bounding box too small to fit header row");
+                        break;
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
 

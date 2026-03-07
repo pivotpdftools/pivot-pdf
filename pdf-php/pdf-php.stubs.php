@@ -181,6 +181,13 @@ class CellStyle
 class Cell
 {
     /**
+     * Number of columns this cell spans (default 1, must be >= 1).
+     *
+     * ext-php-rs converts `col_span` to `colSpan` in PHP.
+     */
+    public int $colSpan;
+
+    /**
      * Create a cell with default style.
      *
      * @param string $text Cell content

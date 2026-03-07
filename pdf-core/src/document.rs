@@ -327,6 +327,18 @@ impl<W: Write> PdfDocument<W> {
         row: &Row,
         cursor: &mut TableCursor,
     ) -> io::Result<FitResult> {
+        let total_span: usize = row.cells.iter().map(|c| c.col_span.max(1)).sum();
+        if total_span != table.columns.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "row col_span sum ({}) must equal table column count ({})",
+                    total_span,
+                    table.columns.len()
+                ),
+            ));
+        }
+
         let (ops, result, used_fonts) =
             table.generate_row_ops(row, cursor, &mut self.truetype_fonts);
 
