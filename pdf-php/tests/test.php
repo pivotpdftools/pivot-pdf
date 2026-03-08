@@ -168,15 +168,15 @@ echo "Test 3 (textflow): OK\n";
 // Test 4: TextStyle defaults
 // ----------------------------------------------------------
 $style = new TextStyle();
-assert_true($style->font_name === "Helvetica", "Default font is Helvetica");
-assert_true($style->font_size === 12.0, "Default font_size is 12.0");
+assert_true($style->fontName === "Helvetica", "Default font is Helvetica");
+assert_true($style->fontSize === 12.0, "Default font_size is 12.0");
 
 $style2 = new TextStyle("Helvetica-Bold", 18.0);
 assert_true(
-    $style2->font_name === "Helvetica-Bold",
+    $style2->fontName === "Helvetica-Bold",
     "Custom font is Helvetica-Bold"
 );
-assert_true($style2->font_size === 18.0, "Custom font_size is 18.0");
+assert_true($style2->fontSize === 18.0, "Custom font_size is 18.0");
 
 echo "Test 4 (TextStyle): OK\n";
 
@@ -479,8 +479,8 @@ $names       = [
 
 // Header style: bold white text on dark background
 $headerStyle = new CellStyle();
-$headerStyle->font_name = "Helvetica-Bold";
-$headerStyle->font_size = 9.0;
+$headerStyle->fontName = "Helvetica-Bold";
+$headerStyle->fontSize = 9.0;
 $headerStyle->padding   = 5.0;
 $headerBg   = new Color(0.2, 0.3, 0.5);
 $headerText = new Color(1.0, 1.0, 1.0);
