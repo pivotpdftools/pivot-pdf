@@ -59,7 +59,7 @@ pub mod truetype;
 /// Low-level PDF binary writer.
 pub mod writer;
 
-pub use document::PdfDocument;
+pub use document::{FormFieldError, PdfDocument};
 pub use fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 pub use graphics::Color;
 pub use images::{ImageFit, ImageId};

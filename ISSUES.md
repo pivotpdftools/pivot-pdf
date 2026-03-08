@@ -1175,3 +1175,46 @@ regressions.
 
 ## Status
 complete
+
+---
+
+# Issue 34: AcroForm Text Fields
+## Description
+Add support for creating fillable text fields at specified coordinates and sizes using
+PDF AcroForms (ISO 32000-1 §12.7). Fields are invisible by default — PDF viewers render
+their own UI chrome (border, cursor, etc.).
+
+API:
+```rust
+doc.begin_page(612.0, 792.0);
+doc.add_text_field("full_name", Rect { x: 72.0, y: 700.0, width: 200.0, height: 18.0 })?;
+doc.add_text_field("email", Rect { x: 72.0, y: 670.0, width: 200.0, height: 18.0 })?;
+doc.end_page().unwrap();
+```
+
+`add_text_field` must be called while a page is active (between `begin_page` and `end_page`).
+Returns an error if the field name has already been used in the document.
+
+**Implementation approach:**
+- Each field is a PDF Widget annotation object (`/Type /Annot /Subtype /Widget /FT /Tx`)
+- Field definitions are tracked in `PageBuilder` and promoted to `PageRecord` at `end_page()`
+- Widget annotation ObjIds are pre-allocated; objects are written at `end_document()` alongside page dicts
+- Each page dict gains an `/Annots` array referencing its widget annotations
+- The document catalog gains an `/AcroForm` dictionary with `/Fields` (all widgets), `/NeedAppearances true`, and a default appearance `/DA` string
+- A document-level `BTreeSet<String>` tracks used field names for uniqueness enforcement
+
+No pre-filled values, no visible styling, no multi-line in this issue.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `FormFieldError` variant (duplicate name, no active page); add `FormFieldDef` internal struct; add `add_text_field(name, rect) -> Result<()>` to `PdfDocument`; track used names in a `BTreeSet<String>` on the document
+- [x] Task 3: Update `PageBuilder` to accumulate `FormFieldDef`s and `PageRecord` to store them with pre-allocated annotation ObjIds (allocated in `end_page()`)
+- [x] Task 4: Write widget annotation objects in `end_document()`; add `/Annots` array to each page dict that has fields
+- [x] Task 5: Write `/AcroForm` entry in the catalog dict during `end_document()`
+- [x] Task 6: Run `cargo test` to confirm all tests pass
+- [x] Task 7: Add PHP bindings for `add_text_field` in `pdf-php/src/lib.rs` and update `pdf-php.stubs.php`
+- [x] Task 8: Add Rust example (`examples/rust/form_fields.rs`) and PHP example (`examples/php/form_fields.php`)
+- [x] Task 9: Update ROADMAP.md — change "Forms and interactive fields" from Future to Planned; create `docs/features/form-fields.md`
+
+## Status
+complete

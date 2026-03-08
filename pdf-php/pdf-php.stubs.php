@@ -593,6 +593,27 @@ class PdfDocument
     public function endPage(): void {}
 
     /**
+     * Add a fillable text field to the current page.
+     *
+     * Fields are invisible by default — PDF viewers render their own UI chrome
+     * (border, cursor, etc.). The field name must be unique across the document.
+     *
+     * Must be called between beginPage() and endPage().
+     *
+     * ```php
+     * $doc->beginPage(612, 792);
+     * $doc->addTextField("full_name", new Rect(72, 700, 200, 18));
+     * $doc->addTextField("email",     new Rect(72, 670, 200, 18));
+     * $doc->endPage();
+     * ```
+     *
+     * @param string $name Field name (must be unique across the document)
+     * @param Rect   $rect Position and size of the field in PDF points
+     * @throws \Exception if no page is active or the field name is already used
+     */
+    public function addTextField(string $name, Rect $rect): void {}
+
+    /**
      * End the document.
      *
      * For file-based documents, returns null.

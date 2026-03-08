@@ -77,7 +77,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 | Hyperlinks | 🔲 Planned | URI annotations — common in reports |
 | Bookmarks / outline / TOC | 🔲 Planned | Navigation in long documents |
 | PDF/A compliance | 🔲 Planned | Regulatory requirement — needs font embedding, metadata, colorspace conformance |
-| Forms and interactive fields | 🔲 Future | Text inputs, checkboxes, dropdowns |
+| Forms and interactive fields | 🔲 Planned | AcroForm text fields implemented; checkboxes, dropdowns future |
 | Encryption / password protection | 🔲 Future | |
 | Digital signatures | 🔲 Future | |
 | Barcodes / QR codes | 🔲 Future | Could be implemented as an image or native vectors |

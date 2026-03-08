@@ -6,8 +6,8 @@ use ext_php_rs::types::Zval;
 
 use pivot_pdf::{
     merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult,
-    FontRef, ImageFit, ImageId, MergeOptions, PdfDocument, PdfReader, Rect, Row, Table,
-    TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
+    FontRef, FormFieldError, ImageFit, ImageId, MergeOptions, PdfDocument, PdfReader, Rect, Row,
+    Table, TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -904,6 +904,28 @@ impl PhpPdfDocument {
             doc.end_page().map_err(|e| {
                 format!("end_page failed: {}", e)
             })
+        })
+    }
+
+    /// Add a fillable text field to the current page.
+    ///
+    /// `name` must be unique across the document. Throws if called with no active page
+    /// or if the name has already been used.
+    ///
+    /// ```php
+    /// $doc->addTextField("full_name", new Rect(72, 700, 200, 18));
+    /// $doc->addTextField("email",     new Rect(72, 670, 200, 18));
+    /// ```
+    pub fn add_text_field(&mut self, name: &str, rect: &PhpRect) -> Result<(), String> {
+        let core_rect = rect.to_core();
+        with_doc!(self, add_text_field, doc => {
+            doc.add_text_field(name, core_rect)
+                .map_err(|e| match e {
+                    FormFieldError::NoActivePage => "add_text_field: no active page".to_string(),
+                    FormFieldError::DuplicateName(n) => {
+                        format!("add_text_field: duplicate field name '{}'", n)
+                    }
+                })
         })
     }
 

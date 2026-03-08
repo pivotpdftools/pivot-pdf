@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::fmt;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
@@ -15,6 +16,45 @@ use crate::tables::{Row, Table, TableCursor};
 use crate::textflow::{FitResult, Rect, TextFlow, TextStyle};
 use crate::truetype::TrueTypeFont;
 use crate::writer::PdfWriter;
+
+// -------------------------------------------------------
+// Form field types
+// -------------------------------------------------------
+
+/// Errors that can occur when adding form fields to a document.
+#[derive(Debug)]
+pub enum FormFieldError {
+    /// `add_text_field` was called without an active page.
+    NoActivePage,
+    /// A field with the given name already exists in this document.
+    DuplicateName(String),
+}
+
+impl fmt::Display for FormFieldError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FormFieldError::NoActivePage => write!(f, "add_text_field called with no active page"),
+            FormFieldError::DuplicateName(name) => {
+                write!(f, "duplicate field name: '{}'", name)
+            }
+        }
+    }
+}
+
+impl std::error::Error for FormFieldError {}
+
+/// A form field definition accumulated while a page is open.
+struct FormFieldDef {
+    name: String,
+    rect: Rect,
+}
+
+/// A form field with a pre-allocated PDF object ID, stored in `PageRecord`.
+struct FormFieldRecord {
+    name: String,
+    rect: Rect,
+    obj_id: ObjId,
+}
 
 const CATALOG_OBJ: ObjId = ObjId(1, 0);
 const PAGES_OBJ: ObjId = ObjId(2, 0);
@@ -49,6 +89,8 @@ struct PageRecord {
     used_fonts: BTreeSet<BuiltinFont>,
     used_truetype_fonts: BTreeSet<usize>,
     used_images: BTreeSet<usize>,
+    /// Form fields on this page with pre-allocated object IDs.
+    fields: Vec<FormFieldRecord>,
 }
 
 /// High-level API for building PDF documents.
@@ -83,6 +125,8 @@ pub struct PdfDocument<W: Write> {
     written_images: BTreeSet<usize>,
     /// Next image number for PDF resource names (Im1, Im2, ...).
     next_image_num: u32,
+    /// Document-level set of used form field names (enforces uniqueness).
+    form_field_names: BTreeSet<String>,
 }
 
 struct PageBuilder {
@@ -95,6 +139,8 @@ struct PageBuilder {
     /// When `Some(idx)`, this builder is adding an overlay to `page_records[idx]`
     /// rather than creating a new page.
     overlay_for: Option<usize>,
+    /// Form fields added while this page was open.
+    fields: Vec<FormFieldDef>,
 }
 
 impl PdfDocument<BufWriter<File>> {
@@ -127,6 +173,7 @@ impl<W: Write> PdfDocument<W> {
             image_obj_ids: BTreeMap::new(),
             written_images: BTreeSet::new(),
             next_image_num: 1,
+            form_field_names: BTreeSet::new(),
         })
     }
 
@@ -183,6 +230,7 @@ impl<W: Write> PdfDocument<W> {
             used_truetype_fonts: BTreeSet::new(),
             used_images: BTreeSet::new(),
             overlay_for: None,
+            fields: Vec::new(),
         });
         self
     }
@@ -224,6 +272,7 @@ impl<W: Write> PdfDocument<W> {
             used_truetype_fonts: BTreeSet::new(),
             used_images: BTreeSet::new(),
             overlay_for: Some(idx),
+            fields: Vec::new(),
         });
 
         Ok(())
@@ -425,6 +474,26 @@ impl<W: Write> PdfDocument<W> {
 
         page.content_ops.extend_from_slice(ops.as_bytes());
         self
+    }
+
+    /// Add a fillable text field to the current page.
+    ///
+    /// `name` must be unique across the document. Returns an error if called
+    /// with no active page or if the name has already been used.
+    pub fn add_text_field(&mut self, name: &str, rect: Rect) -> Result<(), FormFieldError> {
+        if self.current_page.is_none() {
+            return Err(FormFieldError::NoActivePage);
+        }
+        if self.form_field_names.contains(name) {
+            return Err(FormFieldError::DuplicateName(name.to_string()));
+        }
+        self.form_field_names.insert(name.to_string());
+        let page = self.current_page.as_mut().unwrap();
+        page.fields.push(FormFieldDef {
+            name: name.to_string(),
+            rect,
+        });
+        Ok(())
     }
 
     /// Pre-allocate ObjIds for an image if not yet done.
@@ -750,6 +819,21 @@ impl<W: Write> PdfDocument<W> {
         let content_stream = self.make_stream(vec![], page.content_ops);
         self.writer.write_object(content_id, &content_stream)?;
 
+        // Pre-allocate ObjIds for form fields on this page
+        let field_records: Vec<FormFieldRecord> = page
+            .fields
+            .into_iter()
+            .map(|def| {
+                let obj_id = ObjId(self.next_obj_num, 0);
+                self.next_obj_num += 1;
+                FormFieldRecord {
+                    name: def.name,
+                    rect: def.rect,
+                    obj_id,
+                }
+            })
+            .collect();
+
         match page.overlay_for {
             None => {
                 // New page: pre-allocate the page dict ObjId and store the record.
@@ -765,6 +849,7 @@ impl<W: Write> PdfDocument<W> {
                     used_fonts: page.used_fonts,
                     used_truetype_fonts: page.used_truetype_fonts,
                     used_images: page.used_images,
+                    fields: field_records,
                 });
             }
             Some(idx) => {
@@ -774,6 +859,7 @@ impl<W: Write> PdfDocument<W> {
                 record.used_fonts.extend(page.used_fonts);
                 record.used_truetype_fonts.extend(page.used_truetype_fonts);
                 record.used_images.extend(page.used_images);
+                // Overlays don't support adding new fields; field_records is empty for overlays.
             }
         }
 
@@ -844,10 +930,43 @@ impl<W: Write> PdfDocument<W> {
         }
     }
 
+    /// Write widget annotation objects for all form fields in a page.
+    fn write_widget_annotations(&mut self, page_idx: usize) -> io::Result<()> {
+        let page_obj_id = self.page_records[page_idx].obj_id;
+        let field_ids: Vec<(String, Rect, ObjId)> = self.page_records[page_idx]
+            .fields
+            .iter()
+            .map(|f| (f.name.clone(), f.rect, f.obj_id))
+            .collect();
+
+        for (name, rect, obj_id) in field_ids {
+            // Widget annotation: /Rect is [x_ll y_ll x_ur y_ur] in PDF coordinates
+            let rect_array = PdfObject::array(vec![
+                PdfObject::Real(rect.x),
+                PdfObject::Real(rect.y),
+                PdfObject::Real(rect.x + rect.width),
+                PdfObject::Real(rect.y + rect.height),
+            ]);
+            let widget = PdfObject::dict(vec![
+                ("Type", PdfObject::name("Annot")),
+                ("Subtype", PdfObject::name("Widget")),
+                ("FT", PdfObject::name("Tx")),
+                ("T", PdfObject::literal_string(&name)),
+                ("Rect", rect_array),
+                ("P", PdfObject::Reference(page_obj_id)),
+                ("F", PdfObject::Integer(4)), // Print flag
+            ]);
+            self.writer.write_object(obj_id, &widget)?;
+        }
+        Ok(())
+    }
+
     /// Write page dictionaries for all pages. Called from `end_document()`
     /// after all content streams (including overlays) have been written.
     fn write_page_dicts(&mut self) -> io::Result<()> {
         for i in 0..self.page_records.len() {
+            self.write_widget_annotations(i)?;
+
             // Copy out page data to release the borrow before writing
             let obj_id = self.page_records[i].obj_id;
             let content_ids: Vec<ObjId> =
@@ -863,11 +982,16 @@ impl<W: Write> PdfDocument<W> {
                 .collect();
             let used_images: Vec<usize> =
                 self.page_records[i].used_images.iter().copied().collect();
+            let annot_ids: Vec<ObjId> = self.page_records[i]
+                .fields
+                .iter()
+                .map(|f| f.obj_id)
+                .collect();
 
             let resources = self.build_resource_dict(&used_fonts, &used_truetype, &used_images);
             let contents = Self::build_contents(&content_ids);
 
-            let page_dict = PdfObject::dict(vec![
+            let mut page_entries = vec![
                 ("Type", PdfObject::name("Page")),
                 ("Parent", PdfObject::Reference(PAGES_OBJ)),
                 (
@@ -881,10 +1005,58 @@ impl<W: Write> PdfDocument<W> {
                 ),
                 ("Contents", contents),
                 ("Resources", resources),
-            ]);
+            ];
+
+            if !annot_ids.is_empty() {
+                let annots = PdfObject::array(
+                    annot_ids
+                        .iter()
+                        .map(|id| PdfObject::Reference(*id))
+                        .collect(),
+                );
+                page_entries.push(("Annots", annots));
+            }
+
+            let page_dict = PdfObject::dict(page_entries);
             self.writer.write_object(obj_id, &page_dict)?;
         }
         Ok(())
+    }
+
+    /// Collect all form field ObjIds across all pages.
+    fn collect_all_field_ids(&self) -> Vec<ObjId> {
+        self.page_records
+            .iter()
+            .flat_map(|r| r.fields.iter().map(|f| f.obj_id))
+            .collect()
+    }
+
+    /// Write the /AcroForm dictionary in the catalog if any fields exist.
+    /// Returns the ObjId of the AcroForm dict, or None if no fields.
+    fn write_acroform(&mut self) -> io::Result<Option<ObjId>> {
+        let all_field_ids = self.collect_all_field_ids();
+        if all_field_ids.is_empty() {
+            return Ok(None);
+        }
+
+        let fields_array = PdfObject::array(
+            all_field_ids
+                .iter()
+                .map(|id| PdfObject::Reference(*id))
+                .collect(),
+        );
+
+        let acroform_id = ObjId(self.next_obj_num, 0);
+        self.next_obj_num += 1;
+
+        let acroform = PdfObject::dict(vec![
+            ("Fields", fields_array),
+            ("NeedAppearances", PdfObject::Boolean(true)),
+            // Default appearance: Helvetica 12pt black
+            ("DA", PdfObject::literal_string("/Helv 12 Tf 0 g")),
+        ]);
+        self.writer.write_object(acroform_id, &acroform)?;
+        Ok(Some(acroform_id))
     }
 
     /// Write all TrueType font objects. Called during
@@ -996,6 +1168,9 @@ impl<W: Write> PdfDocument<W> {
         // Write TrueType font objects (deferred until now)
         self.write_truetype_fonts()?;
 
+        // Write AcroForm if any form fields exist
+        let acroform_id = self.write_acroform()?;
+
         // Write info dictionary if any entries exist
         let info_id = if !self.info.is_empty() {
             let id = ObjId(self.next_obj_num, 0);
@@ -1027,10 +1202,14 @@ impl<W: Write> PdfDocument<W> {
         self.writer.write_object(PAGES_OBJ, &pages)?;
 
         // Write catalog (obj 1)
-        let catalog = PdfObject::dict(vec![
+        let mut catalog_entries = vec![
             ("Type", PdfObject::name("Catalog")),
             ("Pages", PdfObject::Reference(PAGES_OBJ)),
-        ]);
+        ];
+        if let Some(acroform) = acroform_id {
+            catalog_entries.push(("AcroForm", PdfObject::Reference(acroform)));
+        }
+        let catalog = PdfObject::dict(catalog_entries);
         self.writer.write_object(CATALOG_OBJ, &catalog)?;
 
         // Write xref and trailer
