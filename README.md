@@ -8,13 +8,17 @@ Designed for low memory and CPU consumption — even for documents with hundreds
 
 - **Text placement** — place text at arbitrary (x, y) positions using any supported font
 - **TextFlow** — automatic word wrap and multi-page text reflow with mixed font styles
+- **Word-break control** — configurable overflow handling for long tokens: force-break, hyphenate, or allow overflow; applies to both TextFlow and table cells
 - **14 built-in fonts** — all standard PDF fonts (Helvetica, Times, Courier, Symbol, ZapfDingbats) with no embedding required
 - **TrueType font embedding** — load `.ttf` files for full Unicode text with automatic metrics extraction
 - **Line graphics** — move/lineto paths, rectangles, stroke, fill, fill-stroke, color and line-width control
 - **Images** — place JPEG and PNG images (with alpha) using fit, fill, stretch, or none fit modes
 - **Tables** — streaming row-by-row table layout with per-cell styles, overflow modes, borders, and background colors
+- **Form fields** — fillable AcroForm text fields at specified positions; uniqueness enforced across the document
 - **Page editing** — open completed pages for overlay content (e.g. "Page X of Y" numbering)
 - **Compression** — optional FlateDecode compression for all stream objects (typically 50–80% size reduction)
+- **PDF reading** — open an existing PDF to inspect page count and version string
+- **PDF merging** — combine two or more PDF files into a single output, pages appended in order
 - **PHP extension** — full PHP binding exposing all features via a native extension
 
 ## PHP Installation
@@ -82,6 +86,12 @@ cargo run --example generate_truetype -p pdf-examples
 
 # Page numbers — edit completed pages to add "Page X of Y"
 cargo run --example generate_page_numbers -p pdf-examples
+
+# Form fields — fillable AcroForm text fields
+cargo run --example generate_form_fields -p pdf-examples
+
+# Merge — combine multiple PDFs into one
+cargo run --example generate_merge -p pdf-examples
 ```
 
 ## PHP Extension
@@ -114,6 +124,8 @@ php $EXT examples/php/generate_images.php
 php $EXT examples/php/generate_tables.php
 php $EXT examples/php/generate_truetype.php
 php $EXT examples/php/generate_page_numbers.php
+php $EXT examples/php/generate_form_fields.php
+php $EXT examples/php/generate_merge.php
 ```
 
 IDE type hints and autocompletion are provided by `pdf-php/pdf-php.stubs.php`.
