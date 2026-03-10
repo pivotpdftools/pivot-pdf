@@ -1,4 +1,6 @@
-use pivot_pdf::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{
+    BuiltinFont, DocumentOptions, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle,
+};
 
 const DEJAVU_SANS: &[u8] = include_bytes!("fixtures/DejaVuSans.ttf");
 
@@ -11,7 +13,7 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
 
 #[test]
 fn parse_ttf_and_verify_metrics() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
     // Should return a TrueType font ref
     match font_ref {
@@ -22,7 +24,7 @@ fn parse_ttf_and_verify_metrics() {
 
 #[test]
 fn truetype_font_produces_valid_pdf() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -74,7 +76,7 @@ fn truetype_font_produces_valid_pdf() {
 
 #[test]
 fn hex_encoding_format() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -103,7 +105,7 @@ fn hex_encoding_format() {
 
 #[test]
 fn mixed_builtin_and_truetype_on_same_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let tt_font = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -149,7 +151,7 @@ fn mixed_builtin_and_truetype_on_same_page() {
 
 #[test]
 fn textflow_with_truetype() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let tt_font = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     let style = TextStyle {
@@ -186,7 +188,7 @@ fn textflow_with_truetype() {
 
 #[test]
 fn textflow_mixed_builtin_and_truetype() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let tt_font = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     let normal = TextStyle::default();
@@ -224,7 +226,7 @@ fn textflow_mixed_builtin_and_truetype() {
 
 #[test]
 fn truetype_multi_page_textflow() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let tt_font = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     let style = TextStyle {
@@ -270,7 +272,7 @@ fn truetype_multi_page_textflow() {
 
 #[test]
 fn font_descriptor_has_required_fields() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -300,7 +302,7 @@ fn font_descriptor_has_required_fields() {
 
 #[test]
 fn tounicode_cmap_present() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -327,7 +329,7 @@ fn tounicode_cmap_present() {
 
 #[test]
 fn w_array_present() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -350,7 +352,7 @@ fn w_array_present() {
 
 #[test]
 fn font_file_embedded() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -378,7 +380,7 @@ fn font_file_embedded() {
 #[test]
 fn load_font_file_from_path() {
     let path = "tests/fixtures/DejaVuSans.ttf";
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let font_ref = doc.load_font_file(path).unwrap();
 
     doc.begin_page(612.0, 792.0);
@@ -401,7 +403,7 @@ fn load_font_file_from_path() {
 
 #[test]
 fn multiple_truetype_fonts() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     // Load the same font data twice to simulate two fonts
     let font1 = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();
     let font2 = doc.load_font_bytes(DEJAVU_SANS.to_vec()).unwrap();

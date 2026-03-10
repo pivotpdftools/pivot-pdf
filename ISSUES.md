@@ -1218,3 +1218,63 @@ No pre-filled values, no visible styling, no multi-line in this issue.
 
 ## Status
 complete
+
+---
+
+# Issue 35: Coordinate Origin — Top-Left Support
+
+## Description
+
+PDF's native coordinate system has its origin at the bottom-left of each page, with
+y increasing upward. This is unintuitive for users coming from screen/web contexts,
+where the origin is at the top-left and y increases downward.
+
+This issue adds a `DocumentOptions` struct that accepts an `Origin` setting
+(`BottomLeft` or `TopLeft`). When `TopLeft` is selected, the library transparently
+translates all user-supplied coordinates to PDF space at the API boundary — no PDF
+CTM tricks, just arithmetic (software transform). Users never see raw PDF
+coordinates; they work entirely in their chosen system.
+
+### Design decisions
+
+- **Per-document, not per-page.** A single document has one mental model for coordinates.
+- **Breaking change on constructors.** `PdfDocument::new(writer, options: DocumentOptions)`
+  and `PdfDocument::create(path, options: DocumentOptions)` replace the old zero-options
+  signatures. Version is pre-1.0 so this is acceptable.
+- **`DocumentOptions` with `Default`.** Calling code that passes `DocumentOptions::default()`
+  gets `Origin::BottomLeft` — existing behaviour unchanged.
+- **Rect semantics with `TopLeft`.** `Rect { x, y, width, height }` — `(x, y)` is the
+  **top-left corner** of the rect; `height` extends downward. Transform:
+  `y_pdf_bottom = page_height - y_user - height`.
+- **Point transform:** `y_pdf = page_height - y_user`.
+- **All coordinate-taking APIs affected:** `place_text`, `place_text_styled`,
+  `fit_textflow`, `fit_row`, `place_image`, `move_to`, `line_to`, `rectangle`,
+  form field rects, and `open_page` editing (inherits document origin naturally).
+- **PHP options bag:** `PdfDocumentOptions` class (mirrors `MergeOptions` precedent).
+  `create()` and `createInMemory()` accept an optional trailing `PdfDocumentOptions`.
+  Origin is expressed as a string: `'bottom-left'` (default) or `'top-left'`.
+
+## Tasks
+
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `Origin` enum (`BottomLeft`, `TopLeft`) and `DocumentOptions` struct
+  (with `Default` → `BottomLeft`) to pdf-core; export from `lib.rs`
+- [x] Task 3: Change `PdfDocument::new(writer, options: DocumentOptions)` and
+  `PdfDocument::create(path, options: DocumentOptions)`; store `origin: Origin` on the
+  struct; add private `transform_y(y: f64) -> f64` and `transform_rect(rect: &Rect) -> Rect`
+  helpers that use the stored page height
+- [x] Task 4: Apply transforms to `place_text`, `place_text_styled`, `move_to`,
+  `line_to`, and `rectangle`
+- [x] Task 5: Apply transforms to `fit_textflow`, `fit_row`, `place_image`, and
+  form field rect handling
+- [x] Task 6: Update `pdf-php/src/lib.rs` — add `PhpDocumentOptions` class; update
+  `create()` and `createInMemory()` to accept `Option<&PhpDocumentOptions>`
+- [x] Task 7: Update `pdf-php/pdf-php.stubs.php` with `PdfDocumentOptions` class and
+  updated `create`/`createInMemory` signatures
+- [x] Task 8: Add new top-left origin examples: `examples/rust/top_left_origin.rs`
+  and `examples/php/top_left_origin.php` demonstrating the alternative coordinate system
+- [x] Task 9: Run `cargo test` to confirm all tests pass
+- [x] Task 10: Create `docs/features/coordinate-origin.md`
+
+## Status
+complete

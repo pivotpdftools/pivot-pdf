@@ -1,4 +1,6 @@
-use pivot_pdf::{BuiltinFont, FontRef, ImageFit, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{
+    BuiltinFont, DocumentOptions, FontRef, ImageFit, PdfDocument, Rect, TextFlow, TextStyle,
+};
 
 // -------------------------------------------------------
 // page_count
@@ -6,13 +8,13 @@ use pivot_pdf::{BuiltinFont, FontRef, ImageFit, PdfDocument, Rect, TextFlow, Tex
 
 #[test]
 fn page_count_is_zero_before_any_pages() {
-    let doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     assert_eq!(doc.page_count(), 0);
 }
 
 #[test]
 fn page_count_returns_number_of_completed_pages() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     assert_eq!(doc.page_count(), 0);
 
     doc.begin_page(612.0, 792.0);
@@ -29,7 +31,7 @@ fn page_count_returns_number_of_completed_pages() {
 
 #[test]
 fn page_count_not_incremented_by_open_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
     assert_eq!(doc.page_count(), 1);
@@ -48,7 +50,7 @@ fn page_count_not_incremented_by_open_page() {
 
 #[test]
 fn open_page_zero_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
 
@@ -58,7 +60,7 @@ fn open_page_zero_returns_error() {
 
 #[test]
 fn open_page_out_of_range_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
 
@@ -68,7 +70,7 @@ fn open_page_out_of_range_returns_error() {
 
 #[test]
 fn open_page_on_empty_doc_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let result = doc.open_page(1);
     assert!(result.is_err());
 }
@@ -79,7 +81,7 @@ fn open_page_on_empty_doc_returns_error() {
 
 #[test]
 fn open_page_adds_overlay_content_stream() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Main content", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -103,7 +105,7 @@ fn open_page_adds_overlay_content_stream() {
 
 #[test]
 fn open_page_contents_is_array_when_overlay_added() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Page body", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -125,7 +127,7 @@ fn open_page_contents_is_array_when_overlay_added() {
 
 #[test]
 fn page_without_overlay_has_single_contents_reference() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Solo page", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -147,7 +149,7 @@ fn page_without_overlay_has_single_contents_reference() {
 
 #[test]
 fn open_page_preserves_original_page_dimensions() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     // A5 page (non-letter size to make it detectable)
     doc.begin_page(419.0, 595.0);
     doc.place_text("A5 content", 36.0, 500.0);
@@ -176,7 +178,7 @@ fn open_page_preserves_original_page_dimensions() {
 
 #[test]
 fn multiple_overlays_on_same_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Body text", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -206,7 +208,7 @@ fn multiple_overlays_on_same_page() {
 
 #[test]
 fn open_page_auto_closes_open_new_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Page 1", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -227,7 +229,7 @@ fn open_page_auto_closes_open_new_page() {
 
 #[test]
 fn open_page_auto_close_produces_correct_page_count() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
 
@@ -253,7 +255,7 @@ fn open_page_auto_close_produces_correct_page_count() {
 
 #[test]
 fn end_document_auto_closes_open_edit_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Main", 72.0, 700.0);
     doc.end_page().unwrap();
@@ -278,7 +280,7 @@ fn page_numbering_use_case() {
         font_size: 10.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 
     // Write 3 pages of content
     for i in 1..=3 {
@@ -322,7 +324,7 @@ fn page_numbering_use_case() {
 
 #[test]
 fn overlay_on_multiple_different_pages() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 
     for i in 1..=3 {
         doc.begin_page(612.0, 792.0);
@@ -368,7 +370,7 @@ fn overlay_on_multiple_different_pages() {
 fn overlay_images_included_in_page_resources() {
     const TEST_JPEG: &[u8] = include_bytes!("fixtures/test.jpg");
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     // Main page has no image
     doc.begin_page(612.0, 792.0);
     doc.place_text("Main text", 72.0, 700.0);
@@ -413,7 +415,7 @@ fn overlay_images_included_in_page_resources() {
 
 #[test]
 fn overlay_fonts_included_in_page_resources() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     // Main page uses Helvetica only
     doc.place_text("Main text", 72.0, 700.0);

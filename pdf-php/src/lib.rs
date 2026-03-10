@@ -5,9 +5,10 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pivot_pdf::{
-    merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult,
-    FontRef, FormFieldError, ImageFit, ImageId, MergeOptions, PdfDocument, PdfReader, Rect, Row,
-    Table, TableCursor, TextAlign, TextFlow, TextStyle, TrueTypeFontId, WordBreak,
+    merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color,
+    DocumentOptions, FitResult, FontRef, FormFieldError, ImageFit, ImageId, MergeOptions, Origin,
+    PdfDocument, PdfReader, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle,
+    TrueTypeFontId, WordBreak,
 };
 
 // ----------------------------------------------------------
@@ -557,6 +558,46 @@ impl PhpTableCursor {
 }
 
 // ----------------------------------------------------------
+// PdfDocumentOptions
+// ----------------------------------------------------------
+
+/// PHP class: PdfDocumentOptions
+///
+/// Configure a PDF document. Pass an instance to `PdfDocument::create()` or
+/// `PdfDocument::createInMemory()` to select coordinate origin.
+///
+/// ```php
+/// $opts = new PdfDocumentOptions();
+/// $opts->origin = 'top-left';  // 'bottom-left' (default) or 'top-left'
+/// $doc = PdfDocument::createInMemory($opts);
+/// ```
+#[php_class]
+#[php(name = "PdfDocumentOptions")]
+pub struct PhpDocumentOptions {
+    /// Coordinate origin: `'bottom-left'` (default) or `'top-left'`.
+    #[php(prop)]
+    pub origin: String,
+}
+
+#[php_impl]
+impl PhpDocumentOptions {
+    pub fn __construct() -> Self {
+        PhpDocumentOptions {
+            origin: "bottom-left".to_string(),
+        }
+    }
+}
+
+impl PhpDocumentOptions {
+    fn to_core(&self) -> DocumentOptions {
+        let origin = match self.origin.as_str() {
+            "top-left" => Origin::TopLeft,
+            _ => Origin::BottomLeft,
+        };
+        DocumentOptions { origin }
+    }
+}
+
 // PdfDocument
 // ----------------------------------------------------------
 
@@ -599,16 +640,18 @@ pub struct PhpPdfDocument {
 
 #[php_impl]
 impl PhpPdfDocument {
-    pub fn create(path: &str) -> Result<Self, String> {
-        let doc = PdfDocument::create(path).map_err(|e| format!("create failed: {}", e))?;
+    pub fn create(path: &str, options: Option<&PhpDocumentOptions>) -> Result<Self, String> {
+        let opts = options.map_or_else(DocumentOptions::default, |o| o.to_core());
+        let doc = PdfDocument::create(path, opts).map_err(|e| format!("create failed: {}", e))?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::File(doc)),
         })
     }
 
-    pub fn create_in_memory() -> Result<Self, String> {
-        let doc =
-            PdfDocument::new(Vec::new()).map_err(|e| format!("create_in_memory failed: {}", e,))?;
+    pub fn create_in_memory(options: Option<&PhpDocumentOptions>) -> Result<Self, String> {
+        let opts = options.map_or_else(DocumentOptions::default, |o| o.to_core());
+        let doc = PdfDocument::new(Vec::new(), opts)
+            .map_err(|e| format!("create_in_memory failed: {}", e))?;
         Ok(PhpPdfDocument {
             inner: Some(DocumentInner::Memory(doc)),
         })
@@ -1093,6 +1136,7 @@ pub fn get_module(module: ModuleBuilder) -> ModuleBuilder {
         .class::<PhpRow>()
         .class::<PhpTable>()
         .class::<PhpTableCursor>()
+        .class::<PhpDocumentOptions>()
         .class::<PhpPdfDocument>()
         .class::<PhpPdfReader>()
         .class::<PhpMergeOptions>()

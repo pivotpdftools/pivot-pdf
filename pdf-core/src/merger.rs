@@ -383,10 +383,10 @@ impl OutputBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::PdfDocument;
+    use crate::document::{DocumentOptions, PdfDocument};
 
     fn make_pdf(n: usize) -> Vec<u8> {
-        let mut doc = PdfDocument::new(Vec::new()).unwrap();
+        let mut doc = PdfDocument::new(Vec::new(), DocumentOptions::default()).unwrap();
         for _ in 0..n {
             doc.begin_page(612.0, 792.0);
             doc.end_page().unwrap();

@@ -55,3 +55,7 @@ path = "rust/generate_merge.rs"
 [[example]]
 name = "generate_form_fields"
 path = "rust/generate_form_fields.rs"
+
+[[example]]
+name = "top_left_origin"
+path = "rust/top_left_origin.rs"

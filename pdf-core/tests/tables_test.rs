@@ -1,6 +1,6 @@
 use pivot_pdf::{
-    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
-    Table, TableCursor, TextAlign, WordBreak,
+    BuiltinFont, Cell, CellOverflow, CellStyle, Color, DocumentOptions, FitResult, FontRef, Origin,
+    PdfDocument, Rect, Row, Table, TableCursor, TextAlign, WordBreak,
 };
 
 /// Check whether a byte pattern exists in the buffer.
@@ -9,7 +9,7 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
 }
 
 fn make_doc() -> PdfDocument<Vec<u8>> {
-    PdfDocument::new(Vec::<u8>::new()).unwrap()
+    PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap()
 }
 
 fn full_rect() -> Rect {
@@ -1095,5 +1095,103 @@ fn right_aligned_multi_line_produces_valid_pdf() {
     assert!(
         td_count >= 2,
         "multi-line right-aligned cell should have >=2 Td operators"
+    );
+}
+
+// -------------------------------------------------------
+// Coordinate origin
+// -------------------------------------------------------
+
+#[test]
+fn top_left_origin_fit_row_places_content_in_pdf_space() {
+    // Page height 792. Table rect at y=72 (from top) with TopLeft.
+    // Table top in PDF space = 792 - 72 = 720.
+    // A row of height ~14pt (10pt font + 2*4pt padding) starts at PDF y=720.
+    // Baseline = row_top - font_size = 720 - (10 + 4) = 706.
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), opts).unwrap();
+    doc.begin_page(612.0, 792.0);
+
+    let table = Table::new(vec![200.0, 268.0]);
+    let table_rect = Rect {
+        x: 72.0,
+        y: 72.0,
+        width: 468.0,
+        height: 648.0,
+    };
+    let mut cursor = TableCursor::new(&table_rect);
+
+    let row = Row::new(vec![Cell::new("Name"), Cell::new("Value")]);
+    let result = doc.fit_row(&table, &row, &mut cursor).unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+
+    assert_eq!(result, FitResult::Stop, "row should fit");
+
+    // After placing the row, cursor.current_y should be in user space
+    // (decreased by the row height, which is ~18pt for 10pt font + 4pt padding each side).
+    // In TopLeft user space, y increases downward, so current_y > 72.
+    assert!(
+        cursor.current_y() > 72.0,
+        "cursor.current_y should advance below y=72 in user space, got {}",
+        cursor.current_y()
+    );
+    assert!(
+        cursor.current_y() < 200.0,
+        "cursor should not have moved unreasonably far, got {}",
+        cursor.current_y()
+    );
+
+    // Content should appear in the PDF (text from the row).
+    assert!(
+        contains(&bytes, b"(Name) Tj"),
+        "row content should appear in PDF"
+    );
+}
+
+#[test]
+fn top_left_origin_fit_row_cursor_current_y_is_user_space() {
+    // Verify that cursor.current_y() after fit_row returns a user-space value.
+    // Page 612x792, TopLeft. Table rect at y=72 (72pt from top), height=648.
+    // After one row of ~18pt, current_y should be ~72 + 18 = ~90 in user space.
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), opts).unwrap();
+    doc.begin_page(612.0, 792.0);
+
+    let table = Table::new(vec![468.0]);
+    let rect = Rect {
+        x: 72.0,
+        y: 72.0,
+        width: 468.0,
+        height: 648.0,
+    };
+    let mut cursor = TableCursor::new(&rect);
+
+    doc.fit_row(&table, &Row::new(vec![Cell::new("Row 1")]), &mut cursor)
+        .unwrap();
+    let after_first = cursor.current_y();
+
+    doc.fit_row(&table, &Row::new(vec![Cell::new("Row 2")]), &mut cursor)
+        .unwrap();
+    let after_second = cursor.current_y();
+
+    doc.end_page().unwrap();
+    doc.end_document().unwrap();
+
+    // In TopLeft, current_y increases (moves toward bottom of page).
+    assert!(
+        after_first > 72.0,
+        "after first row, current_y should be below 72 in user space, got {}",
+        after_first
+    );
+    assert!(
+        after_second > after_first,
+        "after second row, current_y should increase further, got {} > {}",
+        after_second,
+        after_first
     );
 }

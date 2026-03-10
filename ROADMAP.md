@@ -17,6 +17,7 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 | TextFlow (word wrap + reflow) | ✅ Implemented | Multi-page, mixed font styles |
 | FlateDecode compression | ✅ Implemented | ~50–80% size reduction |
 | Page editing (post-write overlay) | ✅ Implemented | Used for "Page X of Y" |
+| Coordinate origin (top-left / bottom-left) | ✅ Implemented | Transparent transform via `DocumentOptions` |
 
 ### Fonts
 

@@ -8,9 +8,9 @@
 //! # Quick Start
 //!
 //! ```no_run
-//! use pivot_pdf::{PdfDocument, BuiltinFont, Rect, TextFlow, TextStyle};
+//! use pivot_pdf::{DocumentOptions, PdfDocument, BuiltinFont, Rect, TextFlow, TextStyle};
 //!
-//! let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+//! let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 //! doc.set_info("Title", "Hello World");
 //! doc.begin_page(612.0, 792.0);
 //! doc.place_text("Hello, world!", 72.0, 720.0);
@@ -59,7 +59,7 @@ pub mod truetype;
 /// Low-level PDF binary writer.
 pub mod writer;
 
-pub use document::{FormFieldError, PdfDocument};
+pub use document::{DocumentOptions, FormFieldError, Origin, PdfDocument};
 pub use fonts::{BuiltinFont, FontRef, TrueTypeFontId};
 pub use graphics::Color;
 pub use images::{ImageFit, ImageId};

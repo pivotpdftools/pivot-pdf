@@ -1,4 +1,4 @@
-use pivot_pdf::{ImageFit, PdfDocument, Rect};
+use pivot_pdf::{DocumentOptions, ImageFit, PdfDocument, Rect};
 
 const TEST_JPEG: &[u8] = include_bytes!("fixtures/test.jpg");
 const TEST_PNG: &[u8] = include_bytes!("fixtures/test.png");
@@ -19,35 +19,35 @@ fn make_rect() -> Rect {
 
 #[test]
 fn load_jpeg_from_bytes() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_JPEG.to_vec());
     assert!(img.is_ok(), "JPEG should load successfully");
 }
 
 #[test]
 fn load_png_from_bytes() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec());
     assert!(img.is_ok(), "PNG should load successfully");
 }
 
 #[test]
 fn load_png_alpha_from_bytes() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG_ALPHA.to_vec());
     assert!(img.is_ok(), "RGBA PNG should load successfully");
 }
 
 #[test]
 fn load_image_from_file() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_file("tests/fixtures/test.png");
     assert!(img.is_ok(), "Loading PNG from file should succeed");
 }
 
 #[test]
 fn invalid_data_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let result = doc.load_image_bytes(vec![0x00, 0x01, 0x02, 0x03]);
     assert!(result.is_err(), "Invalid data should return error");
 }
@@ -58,7 +58,7 @@ fn invalid_data_returns_error() {
 
 #[test]
 fn jpeg_produces_image_xobject_with_dctdecode() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_JPEG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -84,7 +84,7 @@ fn jpeg_produces_image_xobject_with_dctdecode() {
 
 #[test]
 fn png_produces_image_xobject() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -102,7 +102,7 @@ fn png_produces_image_xobject() {
 
 #[test]
 fn rgba_png_produces_smask() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG_ALPHA.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -123,7 +123,7 @@ fn rgba_png_produces_smask() {
 
 #[test]
 fn xobject_dict_in_page_resources() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -141,7 +141,7 @@ fn xobject_dict_in_page_resources() {
 
 #[test]
 fn content_stream_has_image_operators() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -162,7 +162,7 @@ fn fit_mode_preserves_aspect_ratio() {
     // Image is 100x80, rect is 200x150
     // Scale to fit: min(200/100, 150/80) = min(2.0, 1.875) = 1.875
     // Width: 100*1.875 = 187.5, Height: 80*1.875 = 150
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fit);
@@ -181,7 +181,7 @@ fn fit_mode_preserves_aspect_ratio() {
 
 #[test]
 fn fill_mode_has_clipping() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Fill);
@@ -195,7 +195,7 @@ fn fill_mode_has_clipping() {
 
 #[test]
 fn stretch_mode_uses_exact_rect_dimensions() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::Stretch);
@@ -216,7 +216,7 @@ fn stretch_mode_uses_exact_rect_dimensions() {
 fn none_mode_uses_natural_size() {
     // Image is 100x80, rect is 200x150
     // None mode: 1px = 1pt, so image is placed at 100x80
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_image(&img, &make_rect(), ImageFit::None);
@@ -241,7 +241,7 @@ fn none_mode_uses_natural_size() {
 
 #[test]
 fn png_gets_flatedecode_when_compressed() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_compression(true);
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
@@ -256,7 +256,7 @@ fn png_gets_flatedecode_when_compressed() {
 
 #[test]
 fn jpeg_keeps_only_dctdecode() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_compression(true);
     let img = doc.load_image_bytes(TEST_JPEG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
@@ -280,7 +280,7 @@ fn jpeg_keeps_only_dctdecode() {
 
 #[test]
 fn same_image_on_multiple_pages_written_once() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
 
     // Place same image on two pages
@@ -318,7 +318,7 @@ fn same_image_on_multiple_pages_written_once() {
 
 #[test]
 fn mixed_text_and_images_have_font_and_xobject_resources() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 72.0, 720.0);
@@ -347,7 +347,7 @@ fn mixed_text_and_images_have_font_and_xobject_resources() {
 
 #[test]
 fn place_image_returns_self_for_chaining() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let img1 = doc.load_image_bytes(TEST_PNG.to_vec()).unwrap();
     let img2 = doc.load_image_bytes(TEST_JPEG.to_vec()).unwrap();
 
@@ -380,7 +380,7 @@ fn place_image_returns_self_for_chaining() {
 
 #[test]
 fn full_workflow_produces_valid_pdf() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_info("Creator", "images-test");
     doc.set_compression(true);
 

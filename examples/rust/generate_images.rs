@@ -1,9 +1,9 @@
-use pivot_pdf::{ImageFit, PdfDocument, Rect};
+use pivot_pdf::{DocumentOptions, ImageFit, PdfDocument, Rect};
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-images.pdf";
-    let mut doc = PdfDocument::create(path).unwrap();
+    let mut doc = PdfDocument::create(path, DocumentOptions::default()).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "Image Support Demo");

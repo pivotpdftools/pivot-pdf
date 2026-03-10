@@ -1,4 +1,4 @@
-use pivot_pdf::{PdfDocument, Rect};
+use pivot_pdf::{DocumentOptions, Origin, PdfDocument, Rect};
 
 fn field_rect() -> Rect {
     Rect {
@@ -15,7 +15,7 @@ fn field_rect() -> Rect {
 
 #[test]
 fn add_text_field_returns_ok() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("full_name", field_rect()).unwrap();
     doc.end_page().unwrap();
@@ -24,7 +24,7 @@ fn add_text_field_returns_ok() {
 
 #[test]
 fn add_text_field_no_active_page_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let result = doc.add_text_field("full_name", field_rect());
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
@@ -37,7 +37,7 @@ fn add_text_field_no_active_page_returns_error() {
 
 #[test]
 fn add_text_field_duplicate_name_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("full_name", field_rect()).unwrap();
     let result = doc.add_text_field("full_name", field_rect());
@@ -54,7 +54,7 @@ fn add_text_field_duplicate_name_returns_error() {
 
 #[test]
 fn add_text_field_duplicate_across_pages_returns_error() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("email", field_rect()).unwrap();
     doc.end_page().unwrap();
@@ -72,7 +72,7 @@ fn add_text_field_duplicate_across_pages_returns_error() {
 
 #[test]
 fn text_field_produces_widget_annotation() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("full_name", field_rect()).unwrap();
     doc.end_page().unwrap();
@@ -90,7 +90,7 @@ fn text_field_produces_widget_annotation() {
 
 #[test]
 fn text_field_rect_appears_in_output() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field(
         "email",
@@ -112,7 +112,7 @@ fn text_field_rect_appears_in_output() {
 
 #[test]
 fn multiple_fields_on_same_page() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field(
         "first_name",
@@ -144,7 +144,7 @@ fn multiple_fields_on_same_page() {
 
 #[test]
 fn fields_on_different_pages() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("name", field_rect()).unwrap();
     doc.end_page().unwrap();
@@ -164,7 +164,7 @@ fn fields_on_different_pages() {
 
 #[test]
 fn acroform_appears_in_catalog() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.add_text_field("field1", field_rect()).unwrap();
     doc.end_page().unwrap();
@@ -191,7 +191,7 @@ fn acroform_appears_in_catalog() {
 
 #[test]
 fn no_acroform_when_no_fields() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("No fields here", 72.0, 720.0);
     doc.end_page().unwrap();
@@ -201,5 +201,41 @@ fn no_acroform_when_no_fields() {
     assert!(
         !output.contains("/AcroForm"),
         "catalog should not contain /AcroForm when no fields"
+    );
+}
+
+#[test]
+fn top_left_origin_transforms_add_text_field() {
+    // Page 612x792. Field rect (72, 72, 200, 18) with TopLeft origin:
+    // PDF Rect = [x_ll, y_ll, x_ur, y_ur]
+    //           = [72, page_h - y - h, 72 + 200, page_h - y]
+    //           = [72, 792 - 72 - 18, 272, 792 - 72]
+    //           = [72, 702, 272, 720]
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), opts).unwrap();
+    doc.begin_page(612.0, 792.0);
+    doc.add_text_field(
+        "email",
+        Rect {
+            x: 72.0,
+            y: 72.0,
+            width: 200.0,
+            height: 18.0,
+        },
+    )
+    .unwrap();
+    doc.end_page().unwrap();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    // Widget /Rect should be [72 702 272 720] in PDF space (values may have .0 suffix).
+    assert!(
+        output.contains("72.0 702.0 272.0 720.0") || output.contains("72 702 272 720"),
+        "field rect should be transformed: {}",
+        output
+            .lines()
+            .find(|l| l.contains("Rect"))
+            .unwrap_or("no Rect")
     );
 }

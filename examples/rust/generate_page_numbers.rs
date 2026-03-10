@@ -11,7 +11,9 @@
 ///   cargo run --example generate_page_numbers -p pdf-examples
 ///
 /// Opens output at: examples/output/rust-page-numbers.pdf
-use pivot_pdf::{BuiltinFont, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle};
+use pivot_pdf::{
+    BuiltinFont, DocumentOptions, FitResult, FontRef, PdfDocument, Rect, TextFlow, TextStyle,
+};
 
 const PAGE_WIDTH: f64 = 612.0;
 const PAGE_HEIGHT: f64 = 792.0;
@@ -31,7 +33,7 @@ fn content_rect() -> Rect {
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-page-numbers.pdf";
-    let mut doc = PdfDocument::create(path).expect("create PDF");
+    let mut doc = PdfDocument::create(path, DocumentOptions::default()).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Page Numbering Example");
     doc.set_info("Creator", "rust-pdf generate_page_numbers example");

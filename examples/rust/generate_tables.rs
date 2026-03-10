@@ -11,8 +11,8 @@
 ///
 /// Opens output at: examples/output/rust-tables.pdf
 use pivot_pdf::{
-    BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
-    TableCursor, TextAlign,
+    BuiltinFont, Cell, CellStyle, Color, DocumentOptions, FitResult, FontRef, PdfDocument, Rect,
+    Row, Table, TableCursor, TextAlign,
 };
 
 const PAGE_WIDTH: f64 = 612.0;
@@ -117,7 +117,7 @@ fn new_page_rect() -> Rect {
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-tables.pdf";
-    let mut doc = PdfDocument::create(path).expect("create PDF");
+    let mut doc = PdfDocument::create(path, DocumentOptions::default()).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Database Report Example");
     doc.set_info("Creator", "rust-pdf generate_tables example");

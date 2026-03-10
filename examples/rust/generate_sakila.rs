@@ -9,8 +9,8 @@
 ///
 /// Output: examples/output/rust-sakila.pdf
 use pivot_pdf::{
-    BuiltinFont, Cell, CellOverflow, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row,
-    Table, TableCursor, TextStyle,
+    BuiltinFont, Cell, CellOverflow, CellStyle, Color, DocumentOptions, FitResult, FontRef,
+    PdfDocument, Rect, Row, Table, TableCursor, TextStyle,
 };
 use rusqlite::{params, Connection};
 
@@ -160,7 +160,7 @@ fn main() {
 
     let conn = Connection::open(db_path).expect("open database");
 
-    let mut doc = PdfDocument::create(out_path).expect("create PDF");
+    let mut doc = PdfDocument::create(out_path, DocumentOptions::default()).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Sakila Rental Report");
     doc.set_info("Creator", "rust-pdf generate_sakila example");

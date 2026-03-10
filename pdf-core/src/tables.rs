@@ -233,12 +233,12 @@ impl Table {
 ///
 /// # Example
 /// ```no_run
-/// # use pivot_pdf::{Table, TableCursor, Row, Cell, Rect, FitResult, PdfDocument};
+/// # use pivot_pdf::{DocumentOptions, Table, TableCursor, Row, Cell, Rect, FitResult, PdfDocument};
 /// # let table = Table::new(vec![200.0, 200.0]);
 /// # let rect = Rect { x: 72.0, y: 720.0, width: 400.0, height: 648.0 };
 /// # let header = Row::new(vec![Cell::new("Name"), Cell::new("Value")]);
 /// # let data: Vec<Row> = vec![];
-/// # let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+/// # let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 /// let mut cursor = TableCursor::new(&rect);
 /// let mut rows = data.iter().peekable();
 /// while rows.peek().is_some() {

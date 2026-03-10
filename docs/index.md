@@ -19,13 +19,18 @@ Designed for **low memory and CPU consumption** — even for documents with hund
 |---------|--------|
 | Text placement | ✅ |
 | TextFlow — word wrap and multi-page reflow | ✅ |
+| Word-break control — force-break, hyphenate, or overflow | ✅ |
 | 14 built-in PDF fonts | ✅ |
 | TrueType font embedding | ✅ |
 | Line graphics (paths, rectangles, stroke, fill) | ✅ |
 | JPEG and PNG images | ✅ |
 | Streaming tables with per-cell styles | ✅ |
+| Coordinate origin — bottom-left or top-left; transparent conversion | ✅ |
+| Form fields — fillable AcroForm text fields | ✅ |
 | Page editing (post-write overlay, page numbering) | ✅ |
 | FlateDecode compression (50–80% size reduction) | ✅ |
+| PDF reading — inspect page count and version | ✅ |
+| PDF merging — combine multiple PDFs into one | ✅ |
 | PHP extension | ✅ |
 
 ---
@@ -35,11 +40,16 @@ Designed for **low memory and CPU consumption** — even for documents with hund
 ### Features
 
 - [Stream Compression](features/compression) — FlateDecode compression for all stream objects
+- [Coordinate Origin](features/coordinate-origin) — Bottom-left (PDF native) or top-left (screen/web) coordinate systems
+- [Form Fields](features/form-fields) — Fillable AcroForm text fields at specified positions
 - [Images](features/images) — Place JPEG and PNG images with fit, fill, stretch, and none modes
 - [Line Graphics](features/line-graphics) — Paths, rectangles, stroke, fill, and color
+- [PDF Merging](features/pdf-merge) — Combine multiple PDF files into a single output
+- [PDF Reading](features/pdf-read) — Open existing PDFs to inspect page count and version
 - [Tables](features/tables) — Streaming row-by-row layout with per-cell styles and overflow modes
 - [TrueType Fonts](features/truetype-fonts) — Embed `.ttf` files with full Unicode support
 - [Page Editing](features/edit-page) — Open completed pages for overlay content (e.g. "Page X of Y")
+- [Word Break](features/word-break) — Configurable overflow handling for long tokens in text and tables
 
 ### PHP Extension
 

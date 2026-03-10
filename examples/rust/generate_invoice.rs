@@ -8,8 +8,8 @@
 ///
 /// Opens output at: examples/output/rust-invoice.pdf
 use pivot_pdf::{
-    BuiltinFont, Cell, CellStyle, Color, FitResult, FontRef, PdfDocument, Rect, Row, Table,
-    TableCursor, TextAlign, TextStyle,
+    BuiltinFont, Cell, CellStyle, Color, DocumentOptions, FitResult, FontRef, PdfDocument, Rect,
+    Row, Table, TableCursor, TextAlign, TextStyle,
 };
 
 const PAGE_W: f64 = 612.0;
@@ -440,7 +440,7 @@ fn draw_footer<W: std::io::Write>(doc: &mut PdfDocument<W>) {
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-invoice.pdf";
-    let mut doc = PdfDocument::create(path).expect("create PDF");
+    let mut doc = PdfDocument::create(path, DocumentOptions::default()).expect("create PDF");
     doc.set_compression(true);
     doc.set_info("Title", "Invoice INV-2024-0042");
     doc.set_info("Creator", "NovaPeak Solutions — generate_invoice example");

@@ -1,8 +1,8 @@
-use pivot_pdf::{Color, PdfDocument};
+use pivot_pdf::{Color, DocumentOptions, PdfDocument};
 
 #[test]
 fn stroke_line_produces_operators() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.move_to(100.0, 200.0);
     doc.line_to(300.0, 400.0);
@@ -16,7 +16,7 @@ fn stroke_line_produces_operators() {
 
 #[test]
 fn set_stroke_color_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.set_stroke_color(Color::rgb(1.0, 0.0, 0.0));
     let bytes = doc.end_document().unwrap();
@@ -26,7 +26,7 @@ fn set_stroke_color_operator() {
 
 #[test]
 fn set_fill_color_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.set_fill_color(Color::rgb(0.0, 0.5, 1.0));
     let bytes = doc.end_document().unwrap();
@@ -36,7 +36,7 @@ fn set_fill_color_operator() {
 
 #[test]
 fn set_line_width_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.set_line_width(2.5);
     let bytes = doc.end_document().unwrap();
@@ -46,7 +46,7 @@ fn set_line_width_operator() {
 
 #[test]
 fn rect_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.rect(50.0, 50.0, 200.0, 100.0);
     let bytes = doc.end_document().unwrap();
@@ -56,7 +56,7 @@ fn rect_operator() {
 
 #[test]
 fn close_path_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.move_to(0.0, 0.0);
     doc.line_to(100.0, 0.0);
@@ -69,7 +69,7 @@ fn close_path_operator() {
 
 #[test]
 fn fill_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.rect(10.0, 10.0, 50.0, 50.0);
     doc.fill();
@@ -80,7 +80,7 @@ fn fill_operator() {
 
 #[test]
 fn fill_stroke_operator() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.rect(10.0, 10.0, 50.0, 50.0);
     doc.fill_stroke();
@@ -91,7 +91,7 @@ fn fill_stroke_operator() {
 
 #[test]
 fn save_restore_state() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.save_state();
     doc.set_line_width(5.0);
@@ -112,7 +112,7 @@ fn gray_color() {
 
 #[test]
 fn graphics_with_text() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 72.0, 720.0);
     doc.set_stroke_color(Color::rgb(0.0, 0.0, 1.0));
@@ -128,7 +128,7 @@ fn graphics_with_text() {
 
 #[test]
 fn method_chaining() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.save_state()
         .set_stroke_color(Color::rgb(1.0, 0.0, 0.0))
@@ -150,7 +150,7 @@ fn method_chaining() {
 
 #[test]
 fn full_workflow_valid_pdf() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_info("Creator", "graphics-test");
     doc.begin_page(612.0, 792.0);
 

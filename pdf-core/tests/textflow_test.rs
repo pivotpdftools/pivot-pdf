@@ -1,4 +1,6 @@
-use pivot_pdf::{BuiltinFont, FitResult, PdfDocument, Rect, TextFlow, TextStyle, WordBreak};
+use pivot_pdf::{
+    BuiltinFont, DocumentOptions, FitResult, PdfDocument, Rect, TextFlow, TextStyle, WordBreak,
+};
 
 /// Helper: check that a byte pattern exists in the buffer.
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
@@ -17,7 +19,7 @@ fn simple_text_fits_in_one_box() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -44,7 +46,7 @@ fn bold_text_uses_f2() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -72,7 +74,7 @@ fn mixed_bold_and_normal() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -96,7 +98,7 @@ fn box_empty_when_too_small() {
         height: 10.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -118,7 +120,7 @@ fn multi_page_flow() {
         height: 50.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     let mut page_count = 0;
 
     loop {
@@ -155,7 +157,7 @@ fn newline_forces_line_break() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -181,7 +183,7 @@ fn empty_textflow_returns_stop() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -192,7 +194,7 @@ fn empty_textflow_returns_stop() {
 
 #[test]
 fn existing_place_text_still_works() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 20.0, 20.0);
     doc.end_page().unwrap();
@@ -218,7 +220,7 @@ fn place_text_and_textflow_on_same_page() {
         height: 200.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Title", 72.0, 720.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
@@ -243,7 +245,7 @@ fn word_wrapping_respects_box_width() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -271,7 +273,7 @@ fn space_preserved_between_text_flows() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -303,7 +305,7 @@ fn bold_font_in_pdf_output() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -330,7 +332,7 @@ fn times_font_in_textflow() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -353,7 +355,7 @@ fn courier_font_in_textflow() {
         height: 648.0,
     };
 
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     let result = doc.fit_textflow(&mut tf, &rect).unwrap();
     doc.end_page().unwrap();
@@ -366,7 +368,7 @@ fn courier_font_in_textflow() {
 
 #[test]
 fn place_text_styled_uses_correct_font() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text_styled(
         "Styled",
@@ -396,7 +398,7 @@ fn narrow_rect() -> Rect {
 }
 
 fn make_doc() -> PdfDocument<Vec<u8>> {
-    PdfDocument::new(Vec::<u8>::new()).unwrap()
+    PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap()
 }
 
 #[test]

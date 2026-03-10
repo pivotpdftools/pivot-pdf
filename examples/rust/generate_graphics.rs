@@ -1,9 +1,9 @@
-use pivot_pdf::{Color, PdfDocument};
+use pivot_pdf::{Color, DocumentOptions, PdfDocument};
 
 fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-graphics.pdf";
-    let mut doc = PdfDocument::create(path).unwrap();
+    let mut doc = PdfDocument::create(path, DocumentOptions::default()).unwrap();
     doc.set_compression(true);
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "Line Graphics Demo");

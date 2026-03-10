@@ -298,22 +298,55 @@ class TableCursor
     public function currentY(): float {}
 }
 
+/**
+ * Options for configuring a new PDF document.
+ *
+ * Pass an instance to PdfDocument::create() or PdfDocument::createInMemory()
+ * to select the coordinate origin.
+ *
+ * ```php
+ * $opts = new PdfDocumentOptions();
+ * $opts->origin = 'top-left';
+ * $doc = PdfDocument::createInMemory($opts);
+ * ```
+ */
+class PdfDocumentOptions
+{
+    /**
+     * Coordinate origin for all user-supplied coordinates.
+     *
+     * Allowed values:
+     *   'bottom-left' — PDF native; y increases upward (default)
+     *   'top-left'    — screen/web style; y increases downward
+     *
+     * @var string
+     */
+    public string $origin;
+
+    /**
+     * Create a PdfDocumentOptions instance with defaults (origin = 'bottom-left').
+     */
+    public function __construct() {}
+}
+
 class PdfDocument
 {
     /**
      * Create a new PDF document that writes to a file.
      *
-     * @param string $path File path to write the PDF to
+     * @param string                  $path    File path to write the PDF to
+     * @param PdfDocumentOptions|null $options Document options (default: bottom-left origin)
      * @throws \Exception on I/O error
      */
-    public static function create(string $path): self {}
+    public static function create(string $path, ?PdfDocumentOptions $options = null): self {}
 
     /**
      * Create a new PDF document in memory.
      *
+     * @param PdfDocumentOptions|null $options Document options (default: bottom-left origin)
      * @throws \Exception on error
      */
-    public static function createInMemory(): self {}
+    public static function createInMemory(?PdfDocumentOptions $options = null): self {}
 
     /**
      * Load a TrueType font file (.ttf).

@@ -73,6 +73,9 @@ If you modify `pdf-core`'s public API:
 1. Run the full test suite: `cargo test`
 2. Format: `cargo fmt`
 3. Update or create the relevant doc in `docs/features/` or `docs/architecture/`
-4. Update `ROADMAP.md` feature matrix if any items changed status (e.g. `🔲 Planned` → `✅ Implemented`, or move examples from Planned to Current)
-5. Mark the issue status as `complete` in ISSUES.md
-6. Report to the user — do not commit without their confirmation
+4. If a new feature was added, update both feature lists to stay in sync:
+   - `README.md` — add a bullet to the Features section
+   - `docs/index.md` — add a row to the Features table and a link under Documentation → Features
+5. Update `ROADMAP.md` feature matrix if any items changed status (e.g. `🔲 Planned` → `✅ Implemented`, or move examples from Planned to Current)
+6. Mark the issue status as `complete` in ISSUES.md
+7. Report to the user — do not commit without their confirmation

@@ -3,7 +3,7 @@
     "description": "PHP stubs and installation guide for the pivot-pdf native PDF generation extension.",
     "type": "library",
     "keywords": ["pdf", "pdf-generation", "extension", "php-extension"],
-    "homepage": "https://github.com/PivotPDF/pivot-pdf",
+    "homepage": "https://pivotpdftools.github.io/pivot-pdf",
     "license": "MIT",
     "support": {
         "issues": "https://github.com/PivotPDF/pivot-pdf/issues",

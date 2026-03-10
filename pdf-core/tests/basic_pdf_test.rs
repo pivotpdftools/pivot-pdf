@@ -1,4 +1,4 @@
-use pivot_pdf::PdfDocument;
+use pivot_pdf::{DocumentOptions, PdfDocument};
 
 /// Helper: find a byte pattern in a buffer.
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -12,7 +12,7 @@ fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
 
 #[test]
 fn full_workflow_produces_valid_pdf() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "A Test Document");
     doc.begin_page(612.0, 792.0);
@@ -52,7 +52,7 @@ fn full_workflow_produces_valid_pdf() {
 
 #[test]
 fn empty_page_produces_valid_pdf() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();
@@ -66,7 +66,7 @@ fn empty_page_produces_valid_pdf() {
 
 #[test]
 fn special_characters_in_text() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Price: $100 (USD)", 20.0, 20.0);
     doc.end_page().unwrap();
@@ -78,7 +78,7 @@ fn special_characters_in_text() {
 
 #[test]
 fn multi_page_document() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 
     doc.begin_page(612.0, 792.0);
     doc.place_text("Page 1", 20.0, 700.0);
@@ -102,7 +102,7 @@ fn multi_page_document() {
 
 #[test]
 fn streaming_frees_page_data() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 
     doc.begin_page(612.0, 792.0);
     doc.place_text("First page content", 20.0, 20.0);
@@ -125,7 +125,7 @@ fn streaming_frees_page_data() {
 
 #[test]
 fn xref_object_count_matches() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.set_info("Creator", "test");
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 20.0, 20.0);
@@ -154,7 +154,7 @@ fn save_to_temp_file() {
     let dir = std::env::temp_dir();
     let path = dir.join("rust_pdf_test_output.pdf");
 
-    let mut doc = PdfDocument::create(&path).unwrap();
+    let mut doc = PdfDocument::create(&path, DocumentOptions::default()).unwrap();
     doc.set_info("Creator", "rust-pdf");
     doc.set_info("Title", "A Test Document");
     doc.begin_page(612.0, 792.0);
@@ -175,7 +175,7 @@ fn save_to_temp_file() {
 fn only_used_fonts_written_to_output() {
     // A doc using only Helvetica should contain that font
     // but not Times-Roman, Courier, etc.
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.place_text("Hello", 20.0, 20.0);
     doc.end_page().unwrap();
@@ -188,7 +188,7 @@ fn only_used_fonts_written_to_output() {
 
 #[test]
 fn empty_page_has_no_font_objects() {
-    let mut doc = PdfDocument::new(Vec::<u8>::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
     doc.begin_page(612.0, 792.0);
     doc.end_page().unwrap();
     let bytes = doc.end_document().unwrap();

@@ -257,25 +257,14 @@ fn parse_png(data: Vec<u8>) -> Result<ImageData, String> {
     }
 }
 
-/// Calculate image placement given a bounding rectangle and fit mode.
+/// Calculate image placement within a rect.
 ///
-/// The `Rect` uses upper-left origin (y grows downward for layout),
-/// but PDF uses bottom-left origin. The `page_height` parameter is
-/// needed for the coordinate conversion.
-pub fn calculate_placement(
-    img_w: u32,
-    img_h: u32,
-    rect: &Rect,
-    fit: ImageFit,
-    page_height: f64,
-) -> ImagePlacement {
+/// `rect` must be in PDF space (bottom-left origin: `rect.y` is the bottom edge).
+/// Returns placement coordinates also in PDF space.
+pub fn calculate_placement(img_w: u32, img_h: u32, rect: &Rect, fit: ImageFit) -> ImagePlacement {
     let iw = img_w as f64;
     let ih = img_h as f64;
-
-    // Convert upper-left rect origin to PDF bottom-left origin.
-    // rect.y is the top edge in upper-left coords.
-    // In PDF coords, the bottom edge is: page_height - (rect.y + rect.height)
-    let pdf_bottom = page_height - (rect.y + rect.height);
+    let pdf_bottom = rect.y;
 
     match fit {
         ImageFit::Fit => {
@@ -325,7 +314,7 @@ pub fn calculate_placement(
             clip: None,
         },
         ImageFit::None => {
-            // 1 pixel = 1 point, positioned at top-left of rect
+            // 1 pixel = 1 point, positioned at top-left of rect (i.e. top edge = rect.y + height)
             let y = pdf_bottom + (rect.height - ih);
             ImagePlacement {
                 x: rect.x,

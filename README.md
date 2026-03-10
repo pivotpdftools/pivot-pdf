@@ -4,6 +4,8 @@ A PDF creation library written in Rust, designed to be used from any language. T
 
 Designed for low memory and CPU consumption — even for documents with hundreds of pages — making it well suited for SaaS and web applications that generate reports, contracts, invoices, or bills of material on the fly.
 
+See Full Documentation: https://pivotpdftools.github.io/pivot-pdf/
+
 ## Features
 
 - **Text placement** — place text at arbitrary (x, y) positions using any supported font
@@ -14,6 +16,7 @@ Designed for low memory and CPU consumption — even for documents with hundreds
 - **Line graphics** — move/lineto paths, rectangles, stroke, fill, fill-stroke, color and line-width control
 - **Images** — place JPEG and PNG images (with alpha) using fit, fill, stretch, or none fit modes
 - **Tables** — streaming row-by-row table layout with per-cell styles, overflow modes, borders, and background colors
+- **Coordinate origin** — choose between bottom-left (PDF native) or top-left (screen/web style) coordinates at document creation time; the library transparently converts
 - **Form fields** — fillable AcroForm text fields at specified positions; uniqueness enforced across the document
 - **Page editing** — open completed pages for overlay content (e.g. "Page X of Y" numbering)
 - **Compression** — optional FlateDecode compression for all stream objects (typically 50–80% size reduction)

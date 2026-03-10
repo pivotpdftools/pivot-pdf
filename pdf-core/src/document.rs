@@ -18,6 +18,35 @@ use crate::truetype::TrueTypeFont;
 use crate::writer::PdfWriter;
 
 // -------------------------------------------------------
+// Coordinate origin types
+// -------------------------------------------------------
+
+/// Coordinate origin used for all user-supplied coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Origin {
+    /// PDF's native bottom-left origin; y increases upward. This is the default.
+    BottomLeft,
+    /// Screen/web-style top-left origin; y increases downward.
+    TopLeft,
+}
+
+/// Options for configuring a new PDF document.
+#[derive(Debug, Clone)]
+pub struct DocumentOptions {
+    /// Coordinate origin for all user-supplied coordinates.
+    /// Defaults to `Origin::BottomLeft` (PDF native).
+    pub origin: Origin,
+}
+
+impl Default for DocumentOptions {
+    fn default() -> Self {
+        DocumentOptions {
+            origin: Origin::BottomLeft,
+        }
+    }
+}
+
+// -------------------------------------------------------
 // Form field types
 // -------------------------------------------------------
 
@@ -127,6 +156,8 @@ pub struct PdfDocument<W: Write> {
     next_image_num: u32,
     /// Document-level set of used form field names (enforces uniqueness).
     form_field_names: BTreeSet<String>,
+    /// Coordinate origin for all user-supplied coordinates.
+    origin: Origin,
 }
 
 struct PageBuilder {
@@ -145,16 +176,16 @@ struct PageBuilder {
 
 impl PdfDocument<BufWriter<File>> {
     /// Create a new PDF document that writes to a file.
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn create<P: AsRef<Path>>(path: P, options: DocumentOptions) -> io::Result<Self> {
         let file = File::create(path)?;
-        Self::new(BufWriter::new(file))
+        Self::new(BufWriter::new(file), options)
     }
 }
 
 impl<W: Write> PdfDocument<W> {
     /// Create a new PDF document that writes to the given writer.
     /// Writes the PDF header immediately.
-    pub fn new(writer: W) -> io::Result<Self> {
+    pub fn new(writer: W, options: DocumentOptions) -> io::Result<Self> {
         let mut pdf_writer = PdfWriter::new(writer);
         pdf_writer.write_header()?;
 
@@ -174,6 +205,7 @@ impl<W: Write> PdfDocument<W> {
             written_images: BTreeSet::new(),
             next_image_num: 1,
             form_field_names: BTreeSet::new(),
+            origin: options.origin,
         })
     }
 
@@ -279,8 +311,12 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Place text at position (x, y) using default 12pt Helvetica.
-    /// Coordinates use PDF's default bottom-left origin.
+    ///
+    /// With [`Origin::BottomLeft`] (default), `(x, y)` is in PDF's native
+    /// bottom-left coordinate system. With [`Origin::TopLeft`], `y` is measured
+    /// from the top of the page, increasing downward.
     pub fn place_text(&mut self, text: &str, x: f64, y: f64) -> &mut Self {
+        let y_pdf = self.transform_y(y);
         let page = self
             .current_page
             .as_mut()
@@ -290,7 +326,7 @@ impl<W: Write> PdfDocument<W> {
         let ops = format!(
             "BT\n/F1 12 Tf\n{} {} Td\n({}) Tj\nET\n",
             format_coord(x),
-            format_coord(y),
+            format_coord(y_pdf),
             escaped,
         );
         page.content_ops.extend_from_slice(ops.as_bytes());
@@ -298,7 +334,10 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Place text at position (x, y) with the given style.
-    /// Coordinates use PDF's default bottom-left origin.
+    ///
+    /// With [`Origin::BottomLeft`] (default), `(x, y)` is in PDF's native
+    /// bottom-left coordinate system. With [`Origin::TopLeft`], `y` is measured
+    /// from the top of the page, increasing downward.
     pub fn place_text_styled(
         &mut self,
         text: &str,
@@ -319,6 +358,7 @@ impl<W: Write> PdfDocument<W> {
             }
         };
 
+        let y_pdf = self.transform_y(y);
         let page = self
             .current_page
             .as_mut()
@@ -338,18 +378,22 @@ impl<W: Write> PdfDocument<W> {
             font_name,
             format_coord(style.font_size),
             format_coord(x),
-            format_coord(y),
+            format_coord(y_pdf),
             text_op,
         );
         page.content_ops.extend_from_slice(ops.as_bytes());
         self
     }
 
-    /// Fit a TextFlow into a bounding rectangle on the current
-    /// page. The flow's cursor advances so subsequent calls
-    /// continue where it left off (for multi-page flow).
+    /// Fit a TextFlow into a bounding rectangle on the current page.
+    ///
+    /// The flow's cursor advances so subsequent calls continue where it left off
+    /// (for multi-page flow). With [`Origin::TopLeft`], `(rect.x, rect.y)` is
+    /// the top-left corner of the area.
     pub fn fit_textflow(&mut self, flow: &mut TextFlow, rect: &Rect) -> io::Result<FitResult> {
-        let (ops, result, used_fonts) = flow.generate_content_ops(rect, &mut self.truetype_fonts);
+        let pdf_rect = self.transform_rect_top_edge(rect);
+        let (ops, result, used_fonts) =
+            flow.generate_content_ops(&pdf_rect, &mut self.truetype_fonts);
 
         let page = self
             .current_page
@@ -388,8 +432,31 @@ impl<W: Write> PdfDocument<W> {
             ));
         }
 
-        let (ops, result, used_fonts) =
-            table.generate_row_ops(row, cursor, &mut self.truetype_fonts);
+        let (ops, result, used_fonts) = match self.origin {
+            Origin::BottomLeft => table.generate_row_ops(row, cursor, &mut self.truetype_fonts),
+            Origin::TopLeft => {
+                let page_h = self.current_page_height();
+                // Convert cursor from user (TopLeft) to PDF top-edge coords.
+                let pdf_top = page_h - cursor.rect.y;
+                let pdf_rect = Rect {
+                    x: cursor.rect.x,
+                    y: pdf_top,
+                    width: cursor.rect.width,
+                    height: cursor.rect.height,
+                };
+                let pdf_current_y = page_h - cursor.current_y;
+                let mut pdf_cursor = crate::tables::TableCursor {
+                    rect: pdf_rect,
+                    current_y: pdf_current_y,
+                    first_row: cursor.first_row,
+                };
+                let result = table.generate_row_ops(row, &mut pdf_cursor, &mut self.truetype_fonts);
+                // Back-transform: current_y in PDF → user space.
+                cursor.current_y = page_h - pdf_cursor.current_y;
+                cursor.first_row = pdf_cursor.first_row;
+                result
+            }
+        };
 
         let page = self
             .current_page
@@ -423,16 +490,17 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Place an image on the current page within the given bounding rect.
+    ///
+    /// With [`Origin::TopLeft`], `(rect.x, rect.y)` is the top-left corner and
+    /// `rect.height` extends downward. With [`Origin::BottomLeft`] (default),
+    /// `rect.y` is the bottom edge in PDF space.
     pub fn place_image(&mut self, image: &ImageId, rect: &Rect, fit: ImageFit) -> &mut Self {
         let idx = image.0;
         let img = &self.images[idx];
-        let page_height = self
-            .current_page
-            .as_ref()
-            .expect("place_image called with no open page")
-            .height;
 
-        let placement = images::calculate_placement(img.width, img.height, rect, fit, page_height);
+        // Transform rect to PDF bottom-left space before computing placement.
+        let pdf_rect = self.transform_rect(rect);
+        let placement = images::calculate_placement(img.width, img.height, &pdf_rect, fit);
 
         self.ensure_image_obj_ids(idx);
         let pdf_name = self.image_obj_ids[&idx].pdf_name.clone();
@@ -480,6 +548,8 @@ impl<W: Write> PdfDocument<W> {
     ///
     /// `name` must be unique across the document. Returns an error if called
     /// with no active page or if the name has already been used.
+    ///
+    /// With [`Origin::TopLeft`], `(rect.x, rect.y)` is the top-left corner.
     pub fn add_text_field(&mut self, name: &str, rect: Rect) -> Result<(), FormFieldError> {
         if self.current_page.is_none() {
             return Err(FormFieldError::NoActivePage);
@@ -487,11 +557,12 @@ impl<W: Write> PdfDocument<W> {
         if self.form_field_names.contains(name) {
             return Err(FormFieldError::DuplicateName(name.to_string()));
         }
+        let pdf_rect = self.transform_rect(&rect);
         self.form_field_names.insert(name.to_string());
         let page = self.current_page.as_mut().unwrap();
         page.fields.push(FormFieldDef {
             name: name.to_string(),
-            rect,
+            rect: pdf_rect,
         });
         Ok(())
     }
@@ -632,39 +703,56 @@ impl<W: Write> PdfDocument<W> {
     }
 
     /// Move to a point without drawing (PDF `m` operator).
+    ///
+    /// With [`Origin::TopLeft`], `y` is measured from the top of the page,
+    /// increasing downward.
     pub fn move_to(&mut self, x: f64, y: f64) -> &mut Self {
+        let y_pdf = self.transform_y(y);
         let page = self
             .current_page
             .as_mut()
             .expect("move_to called with no open page");
-        let ops = format!("{} {} m\n", format_coord(x), format_coord(y));
+        let ops = format!("{} {} m\n", format_coord(x), format_coord(y_pdf));
         page.content_ops.extend_from_slice(ops.as_bytes());
         self
     }
 
-    /// Draw a line from the current point (PDF `l` operator).
+    /// Draw a line to a point (PDF `l` operator).
+    ///
+    /// With [`Origin::TopLeft`], `y` is measured from the top of the page,
+    /// increasing downward.
     pub fn line_to(&mut self, x: f64, y: f64) -> &mut Self {
+        let y_pdf = self.transform_y(y);
         let page = self
             .current_page
             .as_mut()
             .expect("line_to called with no open page");
-        let ops = format!("{} {} l\n", format_coord(x), format_coord(y));
+        let ops = format!("{} {} l\n", format_coord(x), format_coord(y_pdf));
         page.content_ops.extend_from_slice(ops.as_bytes());
         self
     }
 
     /// Append a rectangle to the path (PDF `re` operator).
+    ///
+    /// With [`Origin::TopLeft`], `(x, y)` is the **top-left** corner of the
+    /// rectangle and `height` extends downward.
     pub fn rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> &mut Self {
+        let r = self.transform_rect(&Rect {
+            x,
+            y,
+            width,
+            height,
+        });
         let page = self
             .current_page
             .as_mut()
             .expect("rect called with no open page");
         let ops = format!(
             "{} {} {} {} re\n",
-            format_coord(x),
-            format_coord(y),
-            format_coord(width),
-            format_coord(height),
+            format_coord(r.x),
+            format_coord(r.y),
+            format_coord(r.width),
+            format_coord(r.height),
         );
         page.content_ops.extend_from_slice(ops.as_bytes());
         self
@@ -728,6 +816,84 @@ impl<W: Write> PdfDocument<W> {
             .expect("restore_state called with no open page");
         page.content_ops.extend_from_slice(b"Q\n");
         self
+    }
+
+    // -------------------------------------------------------
+    // Coordinate transform helpers
+    // -------------------------------------------------------
+
+    /// Transform a user y-coordinate to PDF space.
+    /// With `TopLeft`, flips y: `page_height - y`.
+    /// With `BottomLeft`, returns y unchanged.
+    fn transform_y(&self, y: f64) -> f64 {
+        match self.origin {
+            Origin::BottomLeft => y,
+            Origin::TopLeft => {
+                let page_height = self
+                    .current_page
+                    .as_ref()
+                    .expect("transform_y called with no open page")
+                    .height;
+                page_height - y
+            }
+        }
+    }
+
+    /// Transform a user-space rect to PDF bottom-left space.
+    ///
+    /// With `TopLeft`, `(x, y)` is the top-left corner; transforms to
+    /// PDF bottom-left: `y_pdf_bottom = page_height - y_user - height`.
+    ///
+    /// With `BottomLeft`, returns the rect unchanged (`y` is already the
+    /// bottom edge in PDF space).
+    fn transform_rect(&self, rect: &Rect) -> Rect {
+        match self.origin {
+            Origin::BottomLeft => *rect,
+            Origin::TopLeft => {
+                let page_height = self
+                    .current_page
+                    .as_ref()
+                    .expect("transform_rect called with no open page")
+                    .height;
+                Rect {
+                    x: rect.x,
+                    y: page_height - rect.y - rect.height,
+                    width: rect.width,
+                    height: rect.height,
+                }
+            }
+        }
+    }
+
+    /// Transform a user-space rect to the "top-edge-in-PDF-space" format
+    /// used by the text layout and table engines (where `y` = top edge,
+    /// decreasing downward).
+    ///
+    /// With `TopLeft`, `y_top_pdf = page_height - y_user`.
+    /// With `BottomLeft`, returns the rect unchanged (y is already top-edge
+    /// in PDF space for layout engines).
+    fn transform_rect_top_edge(&self, rect: &Rect) -> Rect {
+        match self.origin {
+            Origin::BottomLeft => *rect,
+            Origin::TopLeft => {
+                let page_height = self
+                    .current_page
+                    .as_ref()
+                    .expect("transform_rect_top_edge called with no open page")
+                    .height;
+                Rect {
+                    x: rect.x,
+                    y: page_height - rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                }
+            }
+        }
+    }
+
+    /// Current page height, panics if no page is open.
+    fn current_page_height(&self) -> f64 {
+        self.current_page.as_ref().expect("no open page").height
     }
 
     /// Build a stream object, optionally compressing the data with FlateDecode.

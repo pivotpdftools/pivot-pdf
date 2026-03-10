@@ -1,8 +1,8 @@
-use pivot_pdf::{PdfDocument, PdfReadError, PdfReader};
+use pivot_pdf::{DocumentOptions, PdfDocument, PdfReadError, PdfReader};
 
 /// Helper: create a PDF with `n` blank pages and return the raw bytes.
 fn make_pdf(n: usize) -> Vec<u8> {
-    let mut doc = PdfDocument::new(Vec::new()).unwrap();
+    let mut doc = PdfDocument::new(Vec::new(), DocumentOptions::default()).unwrap();
     for _ in 0..n {
         doc.begin_page(612.0, 792.0);
         doc.end_page().unwrap();
