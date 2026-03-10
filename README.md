@@ -152,7 +152,32 @@ pivot-pdf/
 
 ## Coordinate System
 
-All coordinates are in PDF points (1 pt = 1/72 inch) with the origin at the **bottom-left** of the page. A standard US Letter page is 612 × 792 pt.
+All coordinates are in PDF points (1 pt = 1/72 inch). A standard US Letter page is 612 × 792 pt.
+
+By default, the origin is at the **bottom-left** of the page with y increasing upward (PDF native). Optionally, you can use a **top-left** origin with y increasing downward — more natural for screen/web contexts.
+
+Pass `DocumentOptions` when creating a document:
+
+```rust
+use pivot_pdf::{DocumentOptions, Origin, PdfDocument};
+
+// Top-left (screen/web style)
+let opts = DocumentOptions { origin: Origin::TopLeft };
+let mut doc = PdfDocument::create("out.pdf", opts)?;
+
+// Bottom-left (PDF native, the default)
+let mut doc = PdfDocument::create("out.pdf", DocumentOptions::default())?;
+```
+
+In PHP:
+
+```php
+$opts = new PdfDocumentOptions();
+$opts->origin = 'top-left';   // 'bottom-left' (default) or 'top-left'
+$doc = PdfDocument::create("out.pdf", $opts);
+```
+
+The origin setting applies uniformly to every coordinate-taking API (`place_text`, `fit_textflow`, `fit_row`, `place_image`, `move_to`, `line_to`, `rectangle`, and form fields). See [docs/features/coordinate-origin.md](docs/features/coordinate-origin.md) for full details.
 
 ## License
 
