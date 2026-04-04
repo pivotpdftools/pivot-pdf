@@ -61,7 +61,7 @@ pub mod writer;
 
 pub use document::{DocumentOptions, FormFieldError, Origin, PdfDocument};
 pub use fonts::{BuiltinFont, FontRef, TrueTypeFontId};
-pub use graphics::Color;
+pub use graphics::{Angle, Color};
 pub use images::{ImageFit, ImageId};
 pub use merger::{merge_pdfs, MergeOptions, PdfMergeError};
 pub use reader::{PdfReadError, PdfReader};

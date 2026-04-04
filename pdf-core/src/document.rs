@@ -9,7 +9,7 @@ use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
 use crate::fonts::{BuiltinFont, FontRef, TrueTypeFontId};
-use crate::graphics::Color;
+use crate::graphics::{Angle, Color};
 use crate::images::{self, ImageData, ImageFit, ImageFormat, ImageId};
 use crate::objects::{ObjId, PdfObject};
 use crate::tables::{Row, Table, TableCursor};
@@ -758,6 +758,76 @@ impl<W: Write> PdfDocument<W> {
         self
     }
 
+    /// Append a cubic Bezier curve to the path (PDF `c` operator).
+    ///
+    /// `(x1, y1)` and `(x2, y2)` are the two control points; `(x3, y3)` is
+    /// the endpoint. All y-coordinates are transformed according to the
+    /// document's origin setting.
+    pub fn curve_to(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: f64) -> &mut Self {
+        let y1_pdf = self.transform_y(y1);
+        let y2_pdf = self.transform_y(y2);
+        let y3_pdf = self.transform_y(y3);
+        let page = self
+            .current_page
+            .as_mut()
+            .expect("curve_to called with no open page");
+        let ops = format!(
+            "{} {} {} {} {} {} c\n",
+            format_coord(x1),
+            format_coord(y1_pdf),
+            format_coord(x2),
+            format_coord(y2_pdf),
+            format_coord(x3),
+            format_coord(y3_pdf),
+        );
+        page.content_ops.extend_from_slice(ops.as_bytes());
+        self
+    }
+
+    /// Append an arc to the current path.
+    ///
+    /// The arc is centered at `(cx, cy)` with the given `radius`. Angles follow
+    /// standard math convention: 0° = right, counter-clockwise positive.
+    /// Use [`Angle::degrees`] or [`Angle::radians`] to construct the angle.
+    ///
+    /// The arc is approximated with cubic Bezier segments (up to one per 90°).
+    /// This method moves to the arc's start point; the caller is responsible for
+    /// painting (stroke/fill/fill_stroke).
+    ///
+    /// With [`Origin::TopLeft`], `(cx, cy)` is measured from the top of the page.
+    pub fn arc(&mut self, cx: f64, cy: f64, radius: f64, start: Angle, end: Angle) -> &mut Self {
+        let start_rad = start.to_radians();
+        let end_rad = end.to_radians();
+
+        // Start point in user space
+        let sx = cx + radius * start_rad.cos();
+        let sy = cy + radius * start_rad.sin();
+        self.move_to(sx, sy);
+
+        for (x1, y1, x2, y2, x3, y3) in arc_bezier_segments(cx, cy, radius, start_rad, end_rad) {
+            self.curve_to(x1, y1, x2, y2, x3, y3);
+        }
+        self
+    }
+
+    /// Append a full circle to the current path (closed).
+    ///
+    /// The circle is centered at `(cx, cy)` with the given `radius`. The path
+    /// is automatically closed with the `h` operator; the caller is responsible
+    /// for painting (stroke/fill/fill_stroke).
+    ///
+    /// With [`Origin::TopLeft`], `(cx, cy)` is measured from the top of the page.
+    pub fn circle(&mut self, cx: f64, cy: f64, radius: f64) -> &mut Self {
+        self.arc(
+            cx,
+            cy,
+            radius,
+            Angle::radians(0.0),
+            Angle::radians(std::f64::consts::TAU),
+        )
+        .close_path()
+    }
+
     /// Close the current subpath (PDF `h` operator).
     pub fn close_path(&mut self) -> &mut Self {
         let page = self
@@ -1383,6 +1453,48 @@ impl<W: Write> PdfDocument<W> {
 
         Ok(self.writer.into_inner())
     }
+}
+
+/// Decompose an arc into cubic Bezier segments (up to one per 90°).
+///
+/// Given center `(cx, cy)`, `radius`, and start/end angles in radians
+/// (standard math convention: 0 = right, CCW positive), returns a sequence of
+/// `(x1, y1, x2, y2, x3, y3)` control-point tuples in user space.
+///
+/// The magic constant `k = 4/3 * tan(α/4)` approximates the arc to within
+/// 0.027% for a 90° segment (see PDF 32000-1:2008, §8.5.2).
+fn arc_bezier_segments(
+    cx: f64,
+    cy: f64,
+    radius: f64,
+    start_rad: f64,
+    end_rad: f64,
+) -> Vec<(f64, f64, f64, f64, f64, f64)> {
+    const MAX_SEGMENT: f64 = std::f64::consts::FRAC_PI_2; // 90°
+
+    let mut segments = Vec::new();
+    let total = end_rad - start_rad;
+    let n = (total.abs() / MAX_SEGMENT).ceil().max(1.0) as u32;
+    let step = total / n as f64;
+
+    for i in 0..n {
+        let a = start_rad + i as f64 * step;
+        let b = a + step;
+        let k = 4.0 / 3.0 * ((b - a) / 4.0).tan();
+
+        let (cos_a, sin_a) = (a.cos(), a.sin());
+        let (cos_b, sin_b) = (b.cos(), b.sin());
+
+        let x1 = cx + radius * (cos_a - k * sin_a);
+        let y1 = cy + radius * (sin_a + k * cos_a);
+        let x2 = cx + radius * (cos_b + k * sin_b);
+        let y2 = cy + radius * (sin_b - k * cos_b);
+        let x3 = cx + radius * cos_b;
+        let y3 = cy + radius * sin_b;
+
+        segments.push((x1, y1, x2, y2, x3, y3));
+    }
+    segments
 }
 
 /// Format a coordinate value for PDF content streams.

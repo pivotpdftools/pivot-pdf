@@ -15,7 +15,9 @@ fn main() {
     std::fs::create_dir_all("examples/output").unwrap();
     let path = "examples/output/rust-top-left-origin.pdf";
 
-    let opts = DocumentOptions { origin: Origin::TopLeft };
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
     let mut doc = PdfDocument::create(path, opts).unwrap();
     doc.set_info("Title", "Top-Left Origin Demo");
     doc.set_compression(true);

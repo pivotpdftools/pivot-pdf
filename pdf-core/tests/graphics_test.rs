@@ -1,4 +1,4 @@
-use pivot_pdf::{Color, DocumentOptions, PdfDocument};
+use pivot_pdf::{Angle, Color, DocumentOptions, PdfDocument};
 
 #[test]
 fn stroke_line_produces_operators() {
@@ -146,6 +146,126 @@ fn method_chaining() {
     assert!(output.contains("100 100 l\n"));
     assert!(output.contains("S\n"));
     assert!(output.contains("Q\n"));
+}
+
+#[test]
+fn circle_emits_four_curves_and_closes() {
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    doc.circle(200.0, 300.0, 50.0).stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    // Full circle needs 4 Bezier segments
+    assert_eq!(
+        output.matches(" c\n").count(),
+        4,
+        "circle needs 4 bezier segments"
+    );
+    // Path must be closed
+    assert!(output.contains("h\n"), "circle must close the path");
+}
+
+#[test]
+fn arc_quarter_circle_emits_move_and_curve() {
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    // 0° to 90° arc at (0,0) radius 100 — start point is (100, 0)
+    doc.arc(0.0, 0.0, 100.0, Angle::degrees(0.0), Angle::degrees(90.0))
+        .stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    // starts with move_to to the start point
+    assert!(output.contains("100 0 m\n"), "expected move_to start point");
+    // emits at least one cubic bezier
+    assert!(output.contains(" c\n"), "expected bezier curve operator");
+    // does NOT close the path automatically
+    assert!(!output.contains("h\n"), "arc should not close path");
+}
+
+#[test]
+fn arc_half_circle_emits_two_curves() {
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    // 0° to 180° arc — needs 2 segments
+    doc.arc(0.0, 0.0, 100.0, Angle::degrees(0.0), Angle::degrees(180.0))
+        .stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    assert_eq!(
+        output.matches(" c\n").count(),
+        2,
+        "half circle needs 2 bezier segments"
+    );
+}
+
+#[test]
+fn arc_topleft_origin_transforms_center() {
+    use pivot_pdf::{DocumentOptions, Origin};
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), opts).unwrap();
+    doc.begin_page(612.0, 792.0);
+    // center at (100, 100) TopLeft → y_pdf = 792-100 = 692
+    // 0° arc start x = cx + r = 200, y_pdf = 692 (point y stays same as center y since sin(0)=0)
+    doc.arc(
+        100.0,
+        100.0,
+        100.0,
+        Angle::degrees(0.0),
+        Angle::degrees(90.0),
+    )
+    .stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    // start point: x=200, y=792-100=692 (sin(0)=0, so y_pdf = cy_pdf + r*sin(0) = 692)
+    assert!(
+        output.contains("200 692 m\n"),
+        "start point should be in PDF space"
+    );
+}
+
+#[test]
+fn curve_to_emits_c_operator() {
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
+    doc.begin_page(612.0, 792.0);
+    doc.move_to(50.0, 100.0)
+        .curve_to(80.0, 200.0, 120.0, 200.0, 150.0, 100.0)
+        .stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    assert!(output.contains("50 100 m\n"));
+    assert!(output.contains("80 200 120 200 150 100 c\n"));
+    assert!(output.contains("S\n"));
+}
+
+#[test]
+fn curve_to_topleft_origin() {
+    use pivot_pdf::{DocumentOptions, Origin};
+    let opts = DocumentOptions {
+        origin: Origin::TopLeft,
+    };
+    let mut doc = PdfDocument::new(Vec::<u8>::new(), opts).unwrap();
+    doc.begin_page(612.0, 792.0);
+    // With TopLeft: y_pdf = page_height - y_user = 792 - y
+    doc.curve_to(80.0, 200.0, 120.0, 200.0, 150.0, 100.0)
+        .stroke();
+    let bytes = doc.end_document().unwrap();
+    let output = String::from_utf8_lossy(&bytes);
+    // y1 = 792-200=592, y2 = 792-200=592, y3 = 792-100=692
+    assert!(output.contains("80 592 120 592 150 692 c\n"));
+}
+
+#[test]
+fn angle_degrees_to_radians() {
+    let a = Angle::degrees(180.0);
+    assert!((a.to_radians() - std::f64::consts::PI).abs() < 1e-10);
+}
+
+#[test]
+fn angle_radians_roundtrip() {
+    let a = Angle::radians(std::f64::consts::FRAC_PI_2);
+    assert!((a.to_radians() - std::f64::consts::FRAC_PI_2).abs() < 1e-10);
 }
 
 #[test]

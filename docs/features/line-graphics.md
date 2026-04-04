@@ -38,12 +38,30 @@ Each method appends the corresponding PDF content stream operator:
 | `move_to(x, y)` | `x y m` | Move current point |
 | `line_to(x, y)` | `x y l` | Line from current point |
 | `rect(x, y, w, h)` | `x y w h re` | Append rectangle |
+| `curve_to(x1,y1,x2,y2,x3,y3)` | `x1 y1 x2 y2 x3 y3 c` | Cubic Bezier curve |
+| `arc(cx, cy, r, start, end)` | (sequence of `c`) | Arc via Bezier approximation |
+| `circle(cx, cy, r)` | (sequence of `c` + `h`) | Full closed circle |
 | `close_path()` | `h` | Close subpath |
 | `stroke()` | `S` | Stroke path |
 | `fill()` | `f` | Fill path |
 | `fill_stroke()` | `B` | Fill and stroke path |
 | `save_state()` | `q` | Save graphics state |
 | `restore_state()` | `Q` | Restore graphics state |
+
+### Angle Type
+
+The `Angle` type is used by `arc` to accept angles in either degrees or radians without requiring separate methods:
+
+```rust
+Angle::degrees(90.0)
+Angle::radians(std::f64::consts::FRAC_PI_2)
+```
+
+Angles follow standard math convention: 0° points right, and positive angles rotate counter-clockwise.
+
+### Arc Approximation
+
+PDF has no native arc operator. Arcs are approximated using cubic Bezier segments — one per 90° of arc. The control point offset uses the constant `k = 4/3 * tan(α/4)`, which approximates the arc to within 0.027% for a 90° segment. Up to 4 segments are used for a full circle.
 
 ## Design Decisions
 
@@ -58,9 +76,9 @@ Each method appends the corresponding PDF content stream operator:
 ## Usage Examples
 
 ```rust
-use pdf_core::{Color, PdfDocument};
+use pivot_pdf::{Angle, Color, DocumentOptions, PdfDocument};
 
-let mut doc = PdfDocument::create("output.pdf").unwrap();
+let mut doc = PdfDocument::new(Vec::<u8>::new(), DocumentOptions::default()).unwrap();
 doc.begin_page(612.0, 792.0);
 
 // Stroked rectangle
@@ -85,6 +103,24 @@ doc.move_to(200.0, 300.0)
     .fill_stroke();
 doc.restore_state();
 
+// Cubic Bezier curve (S-curve)
+doc.move_to(80.0, 200.0)
+    .curve_to(150.0, 250.0, 220.0, 150.0, 290.0, 200.0)
+    .stroke();
+
+// Quarter arc (pie slice)
+doc.move_to(300.0, 400.0)
+    .line_to(360.0, 400.0);
+doc.arc(300.0, 400.0, 60.0, Angle::degrees(0.0), Angle::degrees(90.0));
+doc.close_path().fill_stroke();
+
+// Full circle (stroked)
+doc.circle(450.0, 400.0, 40.0).stroke();
+
+// Full circle (filled)
+doc.set_fill_color(Color::rgb(0.8, 0.4, 0.8));
+doc.circle(450.0, 300.0, 40.0).fill();
+
 doc.end_document().unwrap();
 ```
 
@@ -94,8 +130,9 @@ doc.end_document().unwrap();
 - No line cap/join styles (`J`/`j` operators)
 - No clipping paths
 - No transparency/opacity (requires ExtGState resource)
-- Coordinates use PDF's bottom-left origin; no coordinate transform helpers
+- Coordinates respect the document's `Origin` setting (TopLeft or BottomLeft)
 - No validation of path construction order (e.g., `stroke()` without prior path is valid PDF but draws nothing)
+- Arc approximation error is < 0.027% per 90° segment; imperceptible at typical PDF resolutions
 
 ## Related
 - PDF 32000-1:2008, Section 8.5 (Path Construction and Painting)
@@ -108,3 +145,11 @@ doc.end_document().unwrap();
 - Added `Color` struct with RGB and grayscale constructors
 - Added 12 graphics methods to `PdfDocument`
 - PHP extension bindings via `PhpColor` class and 12 method wrappers
+
+### Issue 36 (2026-04): Bezier curves, arcs, and circles
+- Added `Angle` type with `degrees`/`radians` constructors and `to_radians()` method
+- Added `curve_to(x1, y1, x2, y2, x3, y3)` — maps to PDF `c` operator; all y-coords transformed per origin
+- Added `arc_bezier_segments` pure helper — splits arc into ≤90° cubic Bezier segments using `k = 4/3 * tan(α/4)`
+- Added `arc(cx, cy, radius, start: Angle, end: Angle)` — moves to start point, then emits Bezier segments
+- Added `circle(cx, cy, radius)` — convenience on top of `arc` (full 360°, auto-closed with `h`)
+- PHP bindings: `curveTo`, `arc` (degrees), `arcRad` (radians), `circle`

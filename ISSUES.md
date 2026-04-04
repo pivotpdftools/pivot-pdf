@@ -1278,3 +1278,77 @@ coordinates; they work entirely in their chosen system.
 
 ## Status
 complete
+
+---
+
+# Issue 36: Bezier Curves, Arcs, and Circles
+## Description
+Add cubic Bezier curves, arcs, and circles to the graphics API. Arcs and circles
+are approximated using cubic Bezier segments (the standard PDF approach — no native
+arc operator exists).
+
+### New API
+
+**`curve_to`** — maps directly to PDF's `c` operator (two control points + endpoint):
+```rust
+doc.move_to(50.0, 100.0)
+   .curve_to(80.0, 200.0, 120.0, 200.0, 150.0, 100.0)
+   .stroke();
+```
+
+**`Angle` type** — used by `arc` to support both radians and degrees without
+doubling the method count:
+```rust
+Angle::degrees(90.0)
+Angle::radians(std::f64::consts::FRAC_PI_2)
+```
+
+**`arc`** — appends arc segments to the current path; caller paints:
+```rust
+doc.move_to(cx, cy)                                       // optional explicit start
+   .arc(cx, cy, radius, Angle::degrees(0.0), Angle::degrees(180.0))
+   .stroke();
+```
+Arc is approximated with up to 4 cubic Bezier segments (one per 90°). Angles follow
+the standard math convention: 0° = right, counter-clockwise positive. TopLeft origin
+transforms apply to the center coordinates.
+
+**`circle`** — convenience method that emits a full closed circular path:
+```rust
+doc.circle(cx, cy, radius).stroke();
+doc.circle(cx, cy, radius).fill();
+```
+
+### PHP API
+```php
+$doc->curveTo(80, 200, 120, 200, 150, 100);
+$doc->arc($cx, $cy, $radius, $startDeg, $endDeg);       // degrees
+$doc->arcRad($cx, $cy, $radius, $startRad, $endRad);    // radians
+$doc->circle($cx, $cy, $radius);
+```
+PHP doesn't have an `Angle` type, so `arc` takes degrees directly and `arcRad`
+takes radians as a separate method.
+
+## Tasks
+- [x] Task 1: Update ISSUES.md with task breakdown and set status to in-progress
+- [x] Task 2: Add `Angle` struct to `pdf-core/src/graphics.rs` with `degrees` and
+              `radians` constructors and a `to_radians()` method; export from `lib.rs`
+- [x] Task 3: Implement `curve_to(x1, y1, x2, y2, x3, y3)` in `document.rs`
+              (emits PDF `c` operator; transform control points and endpoint via `transform_y`)
+- [x] Task 4: Implement Bezier arc approximation helper (pure function — given center,
+              radius, start/end angle in radians, returns sequence of `curve_to` ops);
+              implement `arc(cx, cy, radius, start: Angle, end: Angle)` on `PdfDocument`
+- [x] Task 5: Implement `circle(cx, cy, radius)` as a convenience on top of `arc`
+              (full 360°, closed path)
+- [x] Task 6: Add PHP bindings for `curve_to`, `arc`, `arcRad`, and `circle` in
+              `pdf-php/src/lib.rs`
+- [x] Task 7: Update `pdf-php/pdf-php.stubs.php` with the four new methods
+- [x] Task 8: Add Rust example `examples/rust/curves_and_arcs.rs` demonstrating
+              curve_to, arc, and circle
+- [x] Task 9: Add PHP example `examples/php/curves_and_arcs.php` with matching output
+- [x] Task 10: Run `cargo test` to confirm all tests pass
+- [x] Task 11: Update `docs/features/line-graphics.md` with new methods, operator
+               mapping table rows, and usage examples
+
+## Status
+complete

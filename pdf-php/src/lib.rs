@@ -5,7 +5,7 @@ use ext_php_rs::prelude::*;
 use ext_php_rs::types::Zval;
 
 use pivot_pdf::{
-    merge_pdfs as core_merge_pdfs, BuiltinFont, Cell, CellOverflow, CellStyle, Color,
+    merge_pdfs as core_merge_pdfs, Angle, BuiltinFont, Cell, CellOverflow, CellStyle, Color,
     DocumentOptions, FitResult, FontRef, FormFieldError, ImageFit, ImageId, MergeOptions, Origin,
     PdfDocument, PdfReader, Rect, Row, Table, TableCursor, TextAlign, TextFlow, TextStyle,
     TrueTypeFontId, WordBreak,
@@ -909,6 +909,63 @@ impl PhpPdfDocument {
     pub fn restore_state(&mut self) -> Result<(), String> {
         with_doc!(self, restore_state, doc => {
             doc.restore_state();
+            Ok(())
+        })
+    }
+
+    /// Append a cubic Bezier curve to the current path (PDF `c` operator).
+    ///
+    /// `(x1, y1)` and `(x2, y2)` are the two control points; `(x3, y3)` is
+    /// the endpoint.
+    pub fn curve_to(
+        &mut self,
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        x3: f64,
+        y3: f64,
+    ) -> Result<(), String> {
+        with_doc!(self, curve_to, doc => {
+            doc.curve_to(x1, y1, x2, y2, x3, y3);
+            Ok(())
+        })
+    }
+
+    /// Append an arc to the current path. Angles in degrees (0 = right, CCW positive).
+    pub fn arc(
+        &mut self,
+        cx: f64,
+        cy: f64,
+        radius: f64,
+        start_deg: f64,
+        end_deg: f64,
+    ) -> Result<(), String> {
+        with_doc!(self, arc, doc => {
+            doc.arc(cx, cy, radius, Angle::degrees(start_deg), Angle::degrees(end_deg));
+            Ok(())
+        })
+    }
+
+    /// Append an arc to the current path. Angles in radians (0 = right, CCW positive).
+    pub fn arc_rad(
+        &mut self,
+        cx: f64,
+        cy: f64,
+        radius: f64,
+        start_rad: f64,
+        end_rad: f64,
+    ) -> Result<(), String> {
+        with_doc!(self, arc_rad, doc => {
+            doc.arc(cx, cy, radius, Angle::radians(start_rad), Angle::radians(end_rad));
+            Ok(())
+        })
+    }
+
+    /// Append a full closed circle to the current path.
+    pub fn circle(&mut self, cx: f64, cy: f64, radius: f64) -> Result<(), String> {
+        with_doc!(self, circle, doc => {
+            doc.circle(cx, cy, radius);
             Ok(())
         })
     }

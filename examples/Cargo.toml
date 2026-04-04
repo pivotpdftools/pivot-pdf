@@ -59,3 +59,7 @@ path = "rust/generate_form_fields.rs"
 [[example]]
 name = "top_left_origin"
 path = "rust/top_left_origin.rs"
+
+[[example]]
+name = "curves_and_arcs"
+path = "rust/curves_and_arcs.rs"

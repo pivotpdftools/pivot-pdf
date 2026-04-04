@@ -1,3 +1,27 @@
+/// An angle value that can be specified in either degrees or radians.
+///
+/// Used by [`PdfDocument::arc`] to accept angles in either unit without
+/// requiring separate methods.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Angle(f64); // stored in radians
+
+impl Angle {
+    /// Create an angle from degrees.
+    pub fn degrees(deg: f64) -> Self {
+        Angle(deg.to_radians())
+    }
+
+    /// Create an angle from radians.
+    pub fn radians(rad: f64) -> Self {
+        Angle(rad)
+    }
+
+    /// Return the angle in radians.
+    pub fn to_radians(self) -> f64 {
+        self.0
+    }
+}
+
 /// RGB color for PDF graphics operations.
 ///
 /// Each component is in the range 0.0 (none) to 1.0 (full intensity).

@@ -48,8 +48,8 @@ This roadmap outlines what has been implemented, what is planned, and what is in
 | Fill and fill-stroke | ✅ Implemented | |
 | Color (RGB, gray) | ✅ Implemented | |
 | Line width | ✅ Implemented | |
-| Bezier curves | 🔲 Planned | `curveto` PDF operator — straightforward to add |
-| Arcs and circles | 🔲 Planned | Approximated with Bezier curves |
+| Bezier curves | ✅ Implemented | `curve_to` — PDF `c` operator with origin transform |
+| Arcs and circles | ✅ Implemented | `arc` and `circle` — approximated with cubic Bezier segments |
 | Gradients (shading) | 🔲 Future | Complex — PDF shading patterns |
 | Patterns and hatching | 🔲 Future | |
 
@@ -105,7 +105,7 @@ Priorities are informed by the core use case: **server-side PDF generation for S
 
 These directly address known gaps in the core generation loop:
 
-1. **Bezier curves and arcs** — Enables circles, rounded rectangles, and charts. The PDF operators are already defined; this is an incremental addition.
+1. ~~**Bezier curves and arcs**~~ — ✅ Implemented in Issue 36.
 2. **Font subsetting** — Embedded TrueType fonts can be 1–20 MB. Subsetting cuts this to 5–50 KB, which matters for any document with embedded fonts.
 3. **Hyperlinks** — URI annotations are commonly needed in generated reports and invoices.
 
@@ -165,6 +165,7 @@ PHP Windows support is prioritized because PHP developers on Windows targeting L
 | Page numbers (edit page) | ✅ | ✅ |
 | Large PDF from database (Sakila) | ✅ | ✅ |
 | Fake invoice | ✅ | ✅ |
+| Curves and arcs | ✅ | ✅ |
 
 ### Planned Examples
 

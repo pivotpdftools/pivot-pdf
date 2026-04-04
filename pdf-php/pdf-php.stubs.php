@@ -553,6 +553,53 @@ class PdfDocument
      */
     public function restoreState(): void {}
 
+    /**
+     * Append a cubic Bezier curve to the current path (PDF `c` operator).
+     *
+     * @param float $x1 First control point X
+     * @param float $y1 First control point Y
+     * @param float $x2 Second control point X
+     * @param float $y2 Second control point Y
+     * @param float $x3 Endpoint X
+     * @param float $y3 Endpoint Y
+     * @throws \Exception if the document has already ended
+     */
+    public function curveTo(float $x1, float $y1, float $x2, float $y2, float $x3, float $y3): void {}
+
+    /**
+     * Append an arc to the current path. Angles are in degrees (0 = right, CCW positive).
+     *
+     * @param float $cx Center X
+     * @param float $cy Center Y
+     * @param float $radius Arc radius
+     * @param float $startDeg Start angle in degrees
+     * @param float $endDeg End angle in degrees
+     * @throws \Exception if the document has already ended
+     */
+    public function arc(float $cx, float $cy, float $radius, float $startDeg, float $endDeg): void {}
+
+    /**
+     * Append an arc to the current path. Angles are in radians (0 = right, CCW positive).
+     *
+     * @param float $cx Center X
+     * @param float $cy Center Y
+     * @param float $radius Arc radius
+     * @param float $startRad Start angle in radians
+     * @param float $endRad End angle in radians
+     * @throws \Exception if the document has already ended
+     */
+    public function arcRad(float $cx, float $cy, float $radius, float $startRad, float $endRad): void {}
+
+    /**
+     * Append a full closed circle to the current path.
+     *
+     * @param float $cx Center X
+     * @param float $cy Center Y
+     * @param float $radius Circle radius
+     * @throws \Exception if the document has already ended
+     */
+    public function circle(float $cx, float $cy, float $radius): void {}
+
     // -------------------------------------------------------
     // Image operations
     // -------------------------------------------------------
