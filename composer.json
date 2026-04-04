@@ -6,8 +6,8 @@
     "homepage": "https://pivotpdftools.github.io/pivot-pdf",
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/PivotPDF/pivot-pdf/issues",
-        "source": "https://github.com/PivotPDF/pivot-pdf"
+        "issues": "https://github.com/pivotpdftools/pivot-pdf/issues",
+        "source": "https://github.com/pivotpdftools/pivot-pdf"
     },
     "require": {
         "php": ">=8.1"
